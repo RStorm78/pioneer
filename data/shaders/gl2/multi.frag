@@ -20,16 +20,30 @@ uniform Material material;
 #if (NUM_LIGHTS > 0)
 //ambient, diffuse, specular
 //would be a good idead to make specular optional
-void ads(in int lightNum, in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
+void ads0(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
 {
-	vec3 s = normalize(vec3(gl_LightSource[lightNum].position)); //directional light
+	vec3 s = normalize(vec3(gl_LightSource[0].position)); //directional light
 	vec3 v = normalize(vec3(-pos));
 	vec3 h = normalize(v + s);
-	light += gl_LightSource[lightNum].diffuse * material.diffuse * max(dot(s, n), 0.0);
+	light += gl_LightSource[0].diffuse * material.diffuse * max(dot(s, n), 0.0);
 #ifdef MAP_SPECULAR
-	specular += texture2D(texture1, texCoord0) * material.specular * gl_LightSource[lightNum].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+	specular += texture2D(texture1, texCoord0) * material.specular * gl_LightSource[0].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
 #else
-	specular += material.specular * gl_LightSource[lightNum].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+	specular += material.specular * gl_LightSource[0].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+#endif
+	specular.a = 0.0;
+	light.a = 1.0;
+}
+void ads1(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
+{
+	vec3 s = normalize(vec3(gl_LightSource[1].position)); //directional light
+	vec3 v = normalize(vec3(-pos));
+	vec3 h = normalize(v + s);
+	light += gl_LightSource[1].diffuse * material.diffuse * max(dot(s, n), 0.0);
+#ifdef MAP_SPECULAR
+	specular += texture2D(texture1, texCoord0) * material.specular * gl_LightSource[1].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+#else
+	specular += material.specular * gl_LightSource[1].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
 #endif
 	specular.a = 0.0;
 	light.a = 1.0;
@@ -68,9 +82,12 @@ void main(void)
 		material.emission; //just emissive parameter
 #endif
 	vec4 specular = vec4(0.0);
-	for (int i=0; i<NUM_LIGHTS; ++i) {
-		ads(i, eyePos, normal, light, specular);
-	}
+//&&for (int i=0; i<NUM_LIGHTS; ++i) {
+		ads0(eyePos, normal, light, specular);
+		if (NUM_LIGHTS>0) {
+			ads1(eyePos, normal, light, specular);
+		}
+//&&}
 #endif //NUM_LIGHTS
 
 #if (NUM_LIGHTS > 0)
