@@ -1130,12 +1130,16 @@ HEADING_LOCK_BACKWARD
     Heading Lock (aft)
 SET_SPEED_KM_S
     Set speed: %speed{f.2} km/s
+SET_SPEED_ALL
+    Set speed: %{speed(s)}
 SET_SPEED_M_S
     Set speed: %speed{f.0} m/s
 KM_S_RELATIVE_TO
     %speed{f.2} km/s rel-to %frame
 M_S_RELATIVE_TO
     %speed{f.0} m/s rel-to %frame
+ALL_RELATIVE_TO
+    %{speed(s)} rel-to %frame
 N_DISTANCE_TO_TARGET
     %distance to target
 IN_TRANSIT
@@ -1146,6 +1150,8 @@ PROBABILITY_OF_ARRIVAL_X_PERCENT
     Probability of arrival: %probability%%
 ALT_IN_METRES
     Alt: %altitude{f.0}m
+ALT_IN_ALL
+	Alt: %{altitude(s)}
 PRESSURE_N_ATMOSPHERES
     P: %pressure{f.2} atm
 NO_HYPERDRIVE

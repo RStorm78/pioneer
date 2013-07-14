@@ -130,22 +130,83 @@ void Error(const char *format, ...)
 	Gui::Screen::ShowBadError((std::string("Error: ") + buf).c_str());
 	abort();
 }
-
-std::string format_distance(double dist, int precision)
+std::string format_number(double number)
+{
+	//Put the last numeros to zero to improve readness of the number.
+	//Ex: 45426 -> 45400 
+	std::ostringstream ss;
+	ss.setf(std::ios::fixed, std::ios::floatfield);
+	ss.precision(0);
+	if (number < 100000.0) {
+		if (number < 10000.0) {
+			if (number < 100.0) {
+				ss << number;
+			} else {
+				ss << number * 0.1 << "0";
+			}
+		} else {
+			ss << number * 0.01 << "00";
+		}
+	} else {
+		ss << number * 0.001 << "000";
+	}
+	return ss.str();
+}
+std::string format_distance(double dist, int precision) // en m
 {
 	std::ostringstream ss;
 	ss.setf(std::ios::fixed, std::ios::floatfield);
-	if (dist < 1000) {
+	if (dist < 10000) { // < 10 000 m -> display m
 		ss.precision(0);
-		ss << dist << " m";
-	} else {
+		ss << format_number(dist) << " m";
+	} else { // >= 100 000 m -> display km
 		ss.precision(precision);
-		if (dist < AU*0.1) {
-			ss << (dist*0.001) << " km";
+		if (dist < AU) {	
+			double kmDist = dist * 0.001;
+			if (kmDist < 1000000.0) { // < 100 000 km -> 45600 km
+				ss.precision(0);
+				ss << format_number(kmDist) << " km";				
+			} else { // 1 AU <= dist < 1 M.km -> 1.45 M.km
+				ss << (kmDist*0.000001) << " M.km";
+			}
 		} else {
 			ss << (dist/AU) << " AU";
 		}
 	}
+	return ss.str();
+}
+
+
+std::string format_speed(double speed) //m/s
+{
+	// 3 km/h 
+	// 55 km/h
+	// 100 km/h
+	// 450 km/h
+	// 5600 km/h
+	// 11200 km/h
+	// 36500 km/h = 10km/s = 10000m/s
+	// 13 km/s
+	// 320 km/s
+	// 3500 km/s
+	// 11800 km/s
+	// 54900 km/s
+	std::ostringstream ss;
+	ss.setf(std::ios::fixed, std::ios::floatfield);
+	std::string speedFormat = ""; 
+	double mySpeed = 0.0;
+
+	//km/s or km/h
+	if (speed > 10000.0) {
+		speedFormat = " km/s";
+		mySpeed = speed * 0.001;
+	} else {
+		speedFormat = " km/h";
+		mySpeed = speed * 3.6;
+	}
+	ss.precision(0);
+	ss << format_number(mySpeed) << speedFormat;
+	
 	return ss.str();
 }
 

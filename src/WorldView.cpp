@@ -485,11 +485,7 @@ void WorldView::RefreshButtonStateAndVisibility()
 				case CONTROL_FIXSPEED: {
 					std::string msg;
 					const double setspeed = Pi::player->GetPlayerController()->GetSetSpeed();
-					if (setspeed > 1000) {
-						msg = stringf(Lang::SET_SPEED_KM_S, formatarg("speed", setspeed*0.001));
-					} else {
-						msg = stringf(Lang::SET_SPEED_M_S, formatarg("speed", setspeed));
-					}
+					msg = stringf(Lang::SET_SPEED_ALL, formatarg("speed(s)", format_speed(setspeed)));
 					m_flightStatus->SetText(msg);
 					break;
 				}
@@ -599,11 +595,7 @@ void WorldView::RefreshButtonStateAndVisibility()
 				rel_to = Pi::player->GetFrame()->GetLabel().c_str();
 				_vel = vel.Length();
 			}
-			if (_vel > 1000) {
-				str = stringf(Lang::KM_S_RELATIVE_TO, formatarg("speed", _vel*0.001), formatarg("frame", rel_to));
-			} else {
-				str = stringf(Lang::M_S_RELATIVE_TO, formatarg("speed", _vel), formatarg("frame", rel_to));
-			}
+			str = stringf(Lang::ALL_RELATIVE_TO, formatarg("speed(s)", format_speed(_vel)), formatarg("frame", rel_to));
 			Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_TOP_LEFT, str);
 		}
 
@@ -633,7 +625,7 @@ void WorldView::RefreshButtonStateAndVisibility()
 				Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, "");
 			else {
 				if (altitude < 0) altitude = 0;
-				Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, stringf(Lang::ALT_IN_METRES, formatarg("altitude", altitude)));
+				Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, stringf(Lang::ALT_IN_ALL, formatarg("altitude(s)", format_distance(altitude))));
 			}
 
 			if (astro->IsType(Object::PLANET)) {
@@ -1272,10 +1264,8 @@ void WorldView::UpdateProjectedObjects()
 
 		if (navspeed >= 0.01) { // 1 cm per second
 			char buf[128];
-			if (navspeed > 1000)
-				snprintf(buf, sizeof(buf), "%.2f km/s", navspeed*0.001);
-			else
-				snprintf(buf, sizeof(buf), "%.0f m/s", navspeed);
+			snprintf(buf, sizeof(buf), "%s", format_speed(navspeed).c_str());
+
 			m_navVelIndicator.label->SetText(buf);
 			UpdateIndicator(m_navVelIndicator, camSpaceNavVel);
 
@@ -1339,7 +1329,7 @@ void WorldView::UpdateProjectedObjects()
 			m_combatTargetIndicator.label->Color(r, 0.0f, b);
 			m_targetLeadIndicator.label->Color(r, 0.0f, b);
 
-			snprintf(buf, sizeof(buf), "%0.fm/s", vel);
+			snprintf(buf, sizeof(buf), "%s", format_speed(vel).c_str());
 			m_targetLeadIndicator.label->SetText(buf);
 			UpdateIndicator(m_targetLeadIndicator, leadpos);
 
