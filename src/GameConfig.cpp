@@ -50,10 +50,24 @@ GameConfig::GameConfig()
 
 void GameConfig::Load()
 {
-	Read(FileSystem::userFiles, "config.ini");
+	std::string configIniFileName = "config.ini";
+#ifdef _DEBUG
+	std::string debugConfigIniFileName = "config.ini.debug";
+	FileSystem::FileInfo &info = FileSystem::userFiles.Lookup(debugConfigIniFileName);
+	if (info.IsFile()) 
+		configIniFileName = debugConfigIniFileName;
+#endif
+	Read(FileSystem::userFiles, configIniFileName);
 }
 
 bool GameConfig::Save()
 {
-	return Write(FileSystem::userFiles, "config.ini");
+	std::string configIniFileName = "config.ini";
+#ifdef _DEBUG
+	std::string debugConfigIniFileName = "config.ini.debug";
+	FileSystem::FileInfo &info = FileSystem::userFiles.Lookup(debugConfigIniFileName);
+	if (info.IsFile()) 
+		configIniFileName = debugConfigIniFileName;
+#endif
+	return Write(FileSystem::userFiles, configIniFileName);
 }
