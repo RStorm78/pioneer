@@ -34,6 +34,8 @@ void ads0(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
 	specular.a = 0.0;
 	light.a = 1.0;
 }
+#endif // NUM_LIGHTS > 0
+#if (NUM_LIGHTS > 1)
 void ads1(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
 {
 	vec3 s = normalize(vec3(gl_LightSource[1].position)); //directional light
@@ -48,7 +50,39 @@ void ads1(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
 	specular.a = 0.0;
 	light.a = 1.0;
 }
+#endif // NUM_LIGHTS > 1
+#if (NUM_LIGHTS > 2)
+void ads2(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
+{
+	vec3 s = normalize(vec3(gl_LightSource[2].position)); //directional light
+	vec3 v = normalize(vec3(-pos));
+	vec3 h = normalize(v + s);
+	light += gl_LightSource[2].diffuse * material.diffuse * max(dot(s, n), 0.0);
+#ifdef MAP_SPECULAR
+	specular += texture2D(texture1, texCoord0) * material.specular * gl_LightSource[2].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+#else
+	specular += material.specular * gl_LightSource[2].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
 #endif
+	specular.a = 0.0;
+	light.a = 1.0;
+}
+#endif // NUM_LIGHTS > 2
+#if (NUM_LIGHTS > 3)
+void ads3(in vec3 pos, in vec3 n, inout vec4 light, inout vec4 specular)
+{
+	vec3 s = normalize(vec3(gl_LightSource[3].position)); //directional light
+	vec3 v = normalize(vec3(-pos));
+	vec3 h = normalize(v + s);
+	light += gl_LightSource[3].diffuse * material.diffuse * max(dot(s, n), 0.0);
+#ifdef MAP_SPECULAR
+	specular += texture2D(texture1, texCoord0) * material.specular * gl_LightSource[3].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+#else
+	specular += material.specular * gl_LightSource[3].diffuse * pow(max(dot(h, n), 0.0), material.shininess);
+#endif
+	specular.a = 0.0;
+	light.a = 1.0;
+}
+#endif // NUM_LIGHTS > 3
 
 void main(void)
 {
@@ -84,9 +118,15 @@ void main(void)
 	vec4 specular = vec4(0.0);
 //&&for (int i=0; i<NUM_LIGHTS; ++i) {
 		ads0(eyePos, normal, light, specular);
-		if (NUM_LIGHTS>0) {
-			ads1(eyePos, normal, light, specular);
-		}
+#if (NUM_LIGHTS > 1)		
+		ads1(eyePos, normal, light, specular);
+#endif // NUM_LIGHTS > 1
+#if (NUM_LIGHTS > 2)		
+		ads2(eyePos, normal, light, specular);
+#endif // NUM_LIGHTS > 2
+#if (NUM_LIGHTS > 3)		
+		ads3(eyePos, normal, light, specular);
+#endif // NUM_LIGHTS > 3
 //&&}
 #endif //NUM_LIGHTS
 
