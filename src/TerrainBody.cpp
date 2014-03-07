@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "TerrainBody.h"
@@ -66,6 +66,8 @@ void TerrainBody::Render(Graphics::Renderer *renderer, const Camera *camera, con
 	renderer->GetNearFarRange(znear, zfar);
 
 	double len = fpos.Length();
+	//objects very far away are downscaled, because they cannot be
+	//accurately drawn using actual distances
 	int shrink = 0;
 	double scale = 1.0f;
 
@@ -105,9 +107,9 @@ void TerrainBody::Render(Graphics::Renderer *renderer, const Camera *camera, con
 	ftran.Translate(campos.x, campos.y, campos.z);
 	SubRender(renderer, ftran, campos);
 
-	// if not using shader then z-buffer precision is hopeless and
-	// we can't place objects on the terrain without awful z artifacts
-	if (shrink || !Graphics::AreShadersEnabled())
+	//clear depth buffer, shrunk objects should not interact
+	//with foreground
+	if (shrink)
 		renderer->ClearDepthBuffer();
 }
 

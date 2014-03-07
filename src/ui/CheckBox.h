@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef UI_CHECKBOX_H
@@ -13,6 +13,12 @@ public:
 	virtual Point PreferredSize();
 	virtual void Layout();
 	virtual void Draw();
+
+	void Toggle();
+	bool IsChecked() const;
+	void SetState(bool state);
+
+	sigc::signal<void, bool> onValueChanged;
 
 protected:
 	friend class Context;

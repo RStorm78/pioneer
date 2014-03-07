@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _SYSTEMVIEW_H
@@ -6,21 +6,19 @@
 
 #include "libs.h"
 #include "gui/Gui.h"
-#include "View.h"
+#include "UIView.h"
 #include "graphics/Drawables.h"
 
 class StarSystem;
 class SystemBody;
 class Orbit;
 
-class SystemView: public View {
+class SystemView: public UIView {
 public:
 	SystemView();
 	virtual ~SystemView();
 	virtual void Update();
 	virtual void Draw3D();
-protected:
-	virtual void OnSwitchTo() {}
 private:
 	static const double PICK_OBJECT_RECT_SIZE;
 	void PutOrbit(const Orbit *orb, const vector3d &offset, const Color &color, double planetRadius = 0.0);
@@ -33,7 +31,7 @@ private:
 	void OnClickAccel(float step);
 	void OnClickRealt();
 	void ResetViewpoint();
-	void MouseButtonDown(int button, int x, int y);
+	void MouseWheel(bool up);
 
 	RefCountedPtr<StarSystem> m_system;
 	const SystemBody *m_selectedObject;
@@ -48,9 +46,10 @@ private:
 	Gui::Label *m_infoLabel;
 	Gui::Label *m_infoText;
 	Gui::LabelSet *m_objectLabels;
-	sigc::connection m_onMouseButtonDown;
+	sigc::connection m_onMouseWheelCon;
 
-	ScopedPtr<Graphics::Drawables::Disk> m_bodyIcon;
+	std::unique_ptr<Graphics::Drawables::Disk> m_bodyIcon;
+	Graphics::RenderState *m_lineState;
 };
 
 #endif /* _SYSTEMVIEW_H */

@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "Widget.h"
@@ -17,10 +17,9 @@ Widget::Widget(Context *context) :
 	m_activeOffset(0),
 	m_activeArea(0),
 	m_font(FONT_INHERIT),
-	m_floating(false),
 	m_disabled(false),
 	m_mouseOver(false),
-	m_mouseActive(false)
+	m_visible(false)
 {
 	assert(m_context);
 }
@@ -38,24 +37,33 @@ Widget::~Widget()
 
 Point Widget::GetAbsolutePosition() const
 {
-	if (IsFloating()) return m_position + m_drawOffset;
 	if (!m_container) return Point() + m_drawOffset;
 	return m_container->GetAbsolutePosition() + m_position + m_drawOffset;
 }
 
+Point Widget::GetMousePos() const
+{
+	return m_context->GetMousePos() - GetAbsolutePosition();
+}
+
 void Widget::Attach(Container *container)
 {
-	assert(m_context == container->GetContext());
 	assert(container);
+	assert(m_context == container->GetContext());
 	m_container = container;
+
+	// we should never be visible while we're detached, and we should
+	// always be detached before being attached to something else
+	assert(!m_visible);
+	NotifyVisible(container->IsVisible());
 }
 
 void Widget::Detach()
 {
+	NotifyVisible(false);
 	m_container = 0;
 	m_position = Point();
 	m_size = Point();
-	m_floating = false;
 }
 
 void Widget::SetDimensions(const Point &position, const Point &size)
@@ -63,6 +71,14 @@ void Widget::SetDimensions(const Point &position, const Point &size)
 	m_position = position;
 	SetSize(size);
 	SetActiveArea(size);
+}
+
+void Widget::NotifyVisible(bool visible)
+{
+	if (m_visible != visible) {
+		m_visible = visible;
+		if (m_visible) { HandleVisible(); } else { HandleInvisible(); }
+	}
 }
 
 void Widget::SetActiveArea(const Point &activeArea, const Point &activeOffset)
@@ -123,6 +139,16 @@ Widget::Font Widget::GetFont() const
 	return m_font;
 }
 
+bool Widget::IsMouseActive() const
+{
+	return (GetContext()->GetMouseActive() == this);
+}
+
+bool Widget::IsSelected() const
+{
+	return (GetContext()->GetSelected() == this);
+}
+
 void Widget::Disable()
 {
 	SetDisabled(true);
@@ -135,131 +161,157 @@ void Widget::Enable()
 	GetContext()->EnableWidget(this);
 }
 
-bool Widget::TriggerKeyDown(const KeyboardEvent &event, bool emit)
+bool Widget::TriggerKeyDown(const KeyboardEvent &event, bool handled)
 {
 	HandleKeyDown(event);
-	if (emit) emit = !onKeyDown.emit(event);
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerKeyDown(event, emit);
-	return !emit;
+	if (!handled) handled = onKeyDown.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerKeyDown(event, handled);
+	return handled;
 }
 
-bool Widget::TriggerKeyUp(const KeyboardEvent &event, bool emit)
+bool Widget::TriggerKeyUp(const KeyboardEvent &event, bool handled)
 {
 	HandleKeyUp(event);
-	if (emit) emit = !onKeyUp.emit(event);
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerKeyUp(event, emit);
-	return !emit;
+	if (!handled) handled = onKeyUp.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerKeyUp(event, handled);
+	return handled;
 }
 
-bool Widget::TriggerKeyPress(const KeyboardEvent &event, bool emit)
+bool Widget::TriggerTextInput(const TextInputEvent &event, bool handled)
 {
-	HandleKeyPress(event);
-	if (emit) emit = !onKeyPress.emit(event);
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerKeyPress(event, emit);
-	return !emit;
+	HandleTextInput(event);
+	if (!handled) handled = onTextInput.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerTextInput(event, handled);
+	return handled;
 }
 
-bool Widget::TriggerMouseDown(const MouseButtonEvent &event, bool emit)
+bool Widget::TriggerMouseDown(const MouseButtonEvent &event, bool handled)
 {
 	HandleMouseDown(event);
-	if (emit) emit = !onMouseDown.emit(event);
-	if (GetContainer() && !IsFloating()) {
+	if (!handled) handled = onMouseDown.emit(event);
+	if (GetContainer()) {
 		MouseButtonEvent translatedEvent = MouseButtonEvent(event.action, event.button, event.pos+GetPosition());
-		GetContainer()->TriggerMouseDown(translatedEvent, emit);
+		handled = GetContainer()->TriggerMouseDown(translatedEvent, handled);
 	}
-	return !emit;
+	return handled;
 }
 
-bool Widget::TriggerMouseUp(const MouseButtonEvent &event, bool emit)
+bool Widget::TriggerMouseUp(const MouseButtonEvent &event, bool handled)
 {
 	HandleMouseUp(event);
-	if (emit) emit = !onMouseUp.emit(event);
-	if (GetContainer() && !IsFloating()) {
+	if (!handled) handled = onMouseUp.emit(event);
+	if (GetContainer()) {
 		MouseButtonEvent translatedEvent = MouseButtonEvent(event.action, event.button, event.pos+GetPosition());
-		GetContainer()->TriggerMouseUp(translatedEvent, emit);
+		handled = GetContainer()->TriggerMouseUp(translatedEvent, handled);
 	}
-	return !emit;
+	return handled;
 }
 
-bool Widget::TriggerMouseMove(const MouseMotionEvent &event, bool emit)
+bool Widget::TriggerMouseMove(const MouseMotionEvent &event, bool handled)
 {
 	HandleMouseMove(event);
-	if (emit) emit = !onMouseMove.emit(event);
-	if (GetContainer() && !IsFloating()) {
+	if (!handled) handled = onMouseMove.emit(event);
+	if (GetContainer()) {
 		MouseMotionEvent translatedEvent = MouseMotionEvent(event.pos+GetPosition(), event.rel);
-		GetContainer()->TriggerMouseMove(translatedEvent, emit);
+		handled = GetContainer()->TriggerMouseMove(translatedEvent, handled);
 	}
-	return !emit;
+	return handled;
 }
 
-bool Widget::TriggerMouseWheel(const MouseWheelEvent &event, bool emit)
+bool Widget::TriggerMouseWheel(const MouseWheelEvent &event, bool handled)
 {
 	HandleMouseWheel(event);
-	if (emit) emit = !onMouseWheel.emit(event);
-	if (GetContainer() && !IsFloating()) {
+	if (!handled) handled = onMouseWheel.emit(event);
+	if (GetContainer()) {
 		MouseWheelEvent translatedEvent = MouseWheelEvent(event.direction, event.pos+GetPosition());
-		GetContainer()->TriggerMouseWheel(translatedEvent, emit);
+		handled = GetContainer()->TriggerMouseWheel(translatedEvent, handled);
 	}
-	return !emit;
+	return handled;
 }
 
-bool Widget::TriggerMouseOver(const Point &pos, bool emit, Widget *stop)
+bool Widget::TriggerJoystickButtonDown(const JoystickButtonEvent &event, bool handled)
+{
+	HandleJoystickButtonDown(event);
+	if (!handled) handled = onJoystickButtonDown.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerJoystickButtonDown(event, handled);
+	return handled;
+}
+
+bool Widget::TriggerJoystickButtonUp(const JoystickButtonEvent &event, bool handled)
+{
+	HandleJoystickButtonUp(event);
+	if (!handled) handled = onJoystickButtonUp.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerJoystickButtonUp(event, handled);
+	return handled;
+}
+
+bool Widget::TriggerJoystickAxisMove(const JoystickAxisMotionEvent &event, bool handled)
+{
+	HandleJoystickAxisMove(event);
+	if (!handled) handled = onJoystickAxisMove.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerJoystickAxisMove(event, handled);
+	return handled;
+}
+
+bool Widget::TriggerJoystickHatMove(const JoystickHatMotionEvent &event, bool handled)
+{
+	HandleJoystickHatMove(event);
+	if (!handled) handled = onJoystickHatMove.emit(event);
+	if (GetContainer()) handled = GetContainer()->TriggerJoystickHatMove(event, handled);
+	return handled;
+}
+
+bool Widget::TriggerMouseOver(const Point &pos, bool handled, Widget *stop)
 {
 	// only send external events on state change
-	if (!m_mouseOver && Contains(pos)) {
+	if (!m_mouseOver) {
 		m_mouseOver = true;
 		HandleMouseOver();
-		if (emit) emit = !onMouseOver.emit();
+		if (!handled) handled = onMouseOver.emit();
 	}
-	if (stop == this) return !emit;
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerMouseOver(pos+GetPosition(), emit, stop);
-	return !emit;
+	if (stop == this) return handled;
+	if (GetContainer()) handled = GetContainer()->TriggerMouseOver(pos+GetPosition(), handled, stop);
+	return handled;
 }
 
-bool Widget::TriggerMouseOut(const Point &pos, bool emit, Widget *stop)
+bool Widget::TriggerMouseOut(const Point &pos, bool handled, Widget *stop)
 {
 	// only send external events on state change
-	if (m_mouseOver && !Contains(pos)) {
+	if (m_mouseOver) {
 		HandleMouseOut();
-		if (emit) emit = !onMouseOut.emit();
+		if (!handled) handled = onMouseOut.emit();
 		m_mouseOver = false;
 	}
-	if (stop == this) return !emit;
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerMouseOut(pos+GetPosition(), emit, stop);
-	return !emit;
+	if (stop == this) return handled;
+	if (GetContainer()) handled = GetContainer()->TriggerMouseOut(pos+GetPosition(), handled, stop);
+	return handled;
 }
 
-bool Widget::TriggerClick(bool emit)
+bool Widget::TriggerClick(bool handled)
 {
 	HandleClick();
-	if (emit) emit = !onClick.emit();
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerClick(emit);
-	return !emit;
+	if (!handled) handled = onClick.emit();
+	if (GetContainer()) handled = GetContainer()->TriggerClick(handled);
+	return handled;
 }
 
 void Widget::TriggerMouseActivate()
 {
-	m_mouseActive = true;
 	HandleMouseActivate();
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerMouseActivate();
 }
 
 void Widget::TriggerMouseDeactivate()
 {
-	m_mouseActive = false;
 	HandleMouseDeactivate();
-	if (GetContainer() && !IsFloating()) GetContainer()->TriggerMouseDeactivate();
 }
 
 void Widget::TriggerSelect()
 {
-	m_selected = true;
 	HandleSelect();
 }
 
 void Widget::TriggerDeselect()
 {
-	m_selected = false;
 	HandleDeselect();
 }
 

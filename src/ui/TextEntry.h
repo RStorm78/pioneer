@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef UI_TEXTENTRY_H
@@ -28,7 +28,8 @@ protected:
 	friend class Context;
 	TextEntry(Context *context, const std::string &text);
 
-	virtual void HandleKeyPress(const KeyboardEvent &event);
+	virtual void HandleKeyDown(const KeyboardEvent &event);
+	virtual void HandleTextInput(const TextInputEvent &event);
 
 private:
 	Label *m_label;

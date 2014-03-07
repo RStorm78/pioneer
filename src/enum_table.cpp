@@ -1,4 +1,4 @@
-/* Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details */
+/* Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details */
 /* Licensed under the terms of the GPL v3. See licenses/GPL-3.txt        */
 
 /* THIS FILE IS AUTO-GENERATED, CHANGES WILL BE OVERWRITTEN */
@@ -6,18 +6,21 @@
 
 #include "enum_table.h"
 #include "EquipType.h"
+#include "LuaEngine.h"
 #include "LuaFileSystem.h"
 #include "Polit.h"
 #include "Ship.h"
 #include "ShipType.h"
 #include "galaxy/StarSystem.h"
 #include "gameui/Face.h"
+#include "scenegraph/Model.h"
 #include "ui/Align.h"
 #include "ui/Event.h"
 #include "ui/Expand.h"
 #include "ui/Gradient.h"
 #include "ui/Margin.h"
 #include "ui/NumberLabel.h"
+#include "ui/Table.h"
 #include "ui/Widget.h"
 
 const struct EnumItem ENUM_EquipSlot[] = {
@@ -121,6 +124,15 @@ const struct EnumItem ENUM_EquipType[] = {
 	{ 0, 0 },
 };
 
+const struct EnumItem ENUM_DetailLevel[] = {
+	{ "VERY_LOW", LuaEngine::DETAIL_VERY_LOW },
+	{ "LOW", LuaEngine::DETAIL_LOW },
+	{ "MEDIUM", LuaEngine::DETAIL_MEDIUM },
+	{ "HIGH", LuaEngine::DETAIL_HIGH },
+	{ "VERY_HIGH", LuaEngine::DETAIL_VERY_HIGH },
+	{ 0, 0 },
+};
+
 const struct EnumItem ENUM_FileSystemRoot[] = {
 	{ "USER", LuaFileSystem::ROOT_USER },
 	{ "DATA", LuaFileSystem::ROOT_DATA },
@@ -169,6 +181,7 @@ const struct EnumItem ENUM_ShipFlightState[] = {
 	{ "DOCKING", Ship::DOCKING },
 	{ "DOCKED", Ship::DOCKED },
 	{ "LANDED", Ship::LANDED },
+	{ "JUMPING", Ship::JUMPING },
 	{ "HYPERSPACE", Ship::HYPERSPACE },
 	{ 0, 0 },
 };
@@ -177,6 +190,7 @@ const struct EnumItem ENUM_ShipJumpStatus[] = {
 	{ "OK", Ship::HYPERJUMP_OK },
 	{ "CURRENT_SYSTEM", Ship::HYPERJUMP_CURRENT_SYSTEM },
 	{ "NO_DRIVE", Ship::HYPERJUMP_NO_DRIVE },
+	{ "INITIATED", Ship::HYPERJUMP_INITIATED },
 	{ "DRIVE_ACTIVE", Ship::HYPERJUMP_DRIVE_ACTIVE },
 	{ "OUT_OF_RANGE", Ship::HYPERJUMP_OUT_OF_RANGE },
 	{ "INSUFFICIENT_FUEL", Ship::HYPERJUMP_INSUFFICIENT_FUEL },
@@ -300,6 +314,16 @@ const struct EnumItem ENUM_GameUIFaceFlags[] = {
 	{ 0, 0 },
 };
 
+const struct EnumItem ENUM_ModelDebugFlags[] = {
+	{ "NONE", SceneGraph::Model::DEBUG_NONE },
+	{ "BBOX", SceneGraph::Model::DEBUG_BBOX },
+	{ "COLLMESH", SceneGraph::Model::DEBUG_COLLMESH },
+	{ "WIREFRAME", SceneGraph::Model::DEBUG_WIREFRAME },
+	{ "TAGS", SceneGraph::Model::DEBUG_TAGS },
+	{ "DOCKING", SceneGraph::Model::DEBUG_DOCKING },
+	{ 0, 0 },
+};
+
 const struct EnumItem ENUM_UIAlignDirection[] = {
 	{ "TOP_LEFT", UI::Align::TOP_LEFT },
 	{ "TOP", UI::Align::TOP },
@@ -315,16 +339,19 @@ const struct EnumItem ENUM_UIAlignDirection[] = {
 
 const struct EnumItem ENUM_UIEventType[] = {
 	{ "KEYBOARD", UI::Event::KEYBOARD },
+	{ "TEXT_INPUT", UI::Event::TEXT_INPUT },
 	{ "MOUSE_BUTTON", UI::Event::MOUSE_BUTTON },
 	{ "MOUSE_MOTION", UI::Event::MOUSE_MOTION },
 	{ "MOUSE_WHEEL", UI::Event::MOUSE_WHEEL },
+	{ "JOYSTICK_AXIS_MOTION", UI::Event::JOYSTICK_AXIS_MOTION },
+	{ "JOYSTICK_HAT_MOTION", UI::Event::JOYSTICK_HAT_MOTION },
+	{ "JOYSTICK_BUTTON", UI::Event::JOYSTICK_BUTTON },
 	{ 0, 0 },
 };
 
 const struct EnumItem ENUM_UIKeyboardAction[] = {
 	{ "DOWN", UI::KeyboardEvent::KEY_DOWN },
 	{ "UP", UI::KeyboardEvent::KEY_UP },
-	{ "PRESS", UI::KeyboardEvent::KEY_PRESS },
 	{ 0, 0 },
 };
 
@@ -344,6 +371,25 @@ const struct EnumItem ENUM_UIMouseButtonType[] = {
 const struct EnumItem ENUM_UIMouseWheelDirection[] = {
 	{ "UP", UI::MouseWheelEvent::WHEEL_UP },
 	{ "DOWN", UI::MouseWheelEvent::WHEEL_DOWN },
+	{ 0, 0 },
+};
+
+const struct EnumItem ENUM_UIJoystickHatDirection[] = {
+	{ "CENTRE", UI::JoystickHatMotionEvent::HAT_CENTRE },
+	{ "UP", UI::JoystickHatMotionEvent::HAT_UP },
+	{ "RIGHT", UI::JoystickHatMotionEvent::HAT_RIGHT },
+	{ "DOWN", UI::JoystickHatMotionEvent::HAT_DOWN },
+	{ "LEFT", UI::JoystickHatMotionEvent::HAT_LEFT },
+	{ "RIGHTUP", UI::JoystickHatMotionEvent::HAT_RIGHTUP },
+	{ "RIGHTDOWN", UI::JoystickHatMotionEvent::HAT_RIGHTDOWN },
+	{ "LEFTUP", UI::JoystickHatMotionEvent::HAT_LEFTUP },
+	{ "LEFTDOWN", UI::JoystickHatMotionEvent::HAT_LEFTDOWN },
+	{ 0, 0 },
+};
+
+const struct EnumItem ENUM_UIJoystickButtonAction[] = {
+	{ "DOWN", UI::JoystickButtonEvent::BUTTON_DOWN },
+	{ "UP", UI::JoystickButtonEvent::BUTTON_UP },
 	{ 0, 0 },
 };
 
@@ -377,6 +423,23 @@ const struct EnumItem ENUM_UINumberLabelFormat[] = {
 	{ "INTEGER", UI::NumberLabel::FORMAT_INTEGER },
 	{ "PERCENT", UI::NumberLabel::FORMAT_PERCENT },
 	{ "PERCENT_INTEGER", UI::NumberLabel::FORMAT_PERCENT_INTEGER },
+	{ "MONEY", UI::NumberLabel::FORMAT_MONEY },
+	{ "MASS_TONNES", UI::NumberLabel::FORMAT_MASS_TONNES },
+	{ 0, 0 },
+};
+
+const struct EnumItem ENUM_UITableRowAlignDirection[] = {
+	{ "TOP", UI::Table::ROW_TOP },
+	{ "CENTER", UI::Table::ROW_CENTER },
+	{ "BOTTOM", UI::Table::ROW_BOTTOM },
+	{ 0, 0 },
+};
+
+const struct EnumItem ENUM_UITableColumnAlignDirection[] = {
+	{ "LEFT", UI::Table::COLUMN_LEFT },
+	{ "CENTER", UI::Table::COLUMN_CENTER },
+	{ "RIGHT", UI::Table::COLUMN_RIGHT },
+	{ "JUSTIFY", UI::Table::COLUMN_JUSTIFY },
 	{ 0, 0 },
 };
 
@@ -400,6 +463,11 @@ const struct EnumItem ENUM_UIFont[] = {
 	{ "HEADING_NORMAL", UI::Widget::FONT_HEADING_NORMAL },
 	{ "HEADING_LARGE", UI::Widget::FONT_HEADING_LARGE },
 	{ "HEADING_XLARGE", UI::Widget::FONT_HEADING_XLARGE },
+	{ "MONO_XSMALL", UI::Widget::FONT_MONO_XSMALL },
+	{ "MONO_SMALL", UI::Widget::FONT_MONO_SMALL },
+	{ "MONO_NORMAL", UI::Widget::FONT_MONO_NORMAL },
+	{ "MONO_LARGE", UI::Widget::FONT_MONO_LARGE },
+	{ "MONO_XLARGE", UI::Widget::FONT_MONO_XLARGE },
 	{ "INHERIT", UI::Widget::FONT_INHERIT },
 	{ 0, 0 },
 };
@@ -407,6 +475,7 @@ const struct EnumItem ENUM_UIFont[] = {
 const struct EnumTable ENUM_TABLES[] = {
 	{ "EquipSlot", ENUM_EquipSlot },
 	{ "EquipType", ENUM_EquipType },
+	{ "DetailLevel", ENUM_DetailLevel },
 	{ "FileSystemRoot", ENUM_FileSystemRoot },
 	{ "PolitCrime", ENUM_PolitCrime },
 	{ "PolitEcon", ENUM_PolitEcon },
@@ -423,16 +492,21 @@ const struct EnumTable ENUM_TABLES[] = {
 	{ "BodyType", ENUM_BodyType },
 	{ "BodySuperType", ENUM_BodySuperType },
 	{ "GameUIFaceFlags", ENUM_GameUIFaceFlags },
+	{ "ModelDebugFlags", ENUM_ModelDebugFlags },
 	{ "UIAlignDirection", ENUM_UIAlignDirection },
 	{ "UIEventType", ENUM_UIEventType },
 	{ "UIKeyboardAction", ENUM_UIKeyboardAction },
 	{ "UIMouseButtonAction", ENUM_UIMouseButtonAction },
 	{ "UIMouseButtonType", ENUM_UIMouseButtonType },
 	{ "UIMouseWheelDirection", ENUM_UIMouseWheelDirection },
+	{ "UIJoystickHatDirection", ENUM_UIJoystickHatDirection },
+	{ "UIJoystickButtonAction", ENUM_UIJoystickButtonAction },
 	{ "UIExpandDirection", ENUM_UIExpandDirection },
 	{ "UIGradientDirection", ENUM_UIGradientDirection },
 	{ "UIMarginDirection", ENUM_UIMarginDirection },
 	{ "UINumberLabelFormat", ENUM_UINumberLabelFormat },
+	{ "UITableRowAlignDirection", ENUM_UITableRowAlignDirection },
+	{ "UITableColumnAlignDirection", ENUM_UITableColumnAlignDirection },
 	{ "UISizeControl", ENUM_UISizeControl },
 	{ "UIFont", ENUM_UIFont },
 	{ 0, 0 },
@@ -441,6 +515,7 @@ const struct EnumTable ENUM_TABLES[] = {
 const struct EnumTable ENUM_TABLES_PUBLIC[] = {
 	{ "EquipSlot", ENUM_EquipSlot },
 	{ "EquipType", ENUM_EquipType },
+	{ "DetailLevel", ENUM_DetailLevel },
 	{ "FileSystemRoot", ENUM_FileSystemRoot },
 	{ "PolitCrime", ENUM_PolitCrime },
 	{ "PolitEcon", ENUM_PolitEcon },
@@ -457,15 +532,20 @@ const struct EnumTable ENUM_TABLES_PUBLIC[] = {
 	{ "BodyType", ENUM_BodyType },
 	{ "BodySuperType", ENUM_BodySuperType },
 	{ "GameUIFaceFlags", ENUM_GameUIFaceFlags },
+	{ "ModelDebugFlags", ENUM_ModelDebugFlags },
 	{ "UIAlignDirection", ENUM_UIAlignDirection },
 	{ "UIEventType", ENUM_UIEventType },
 	{ "UIKeyboardAction", ENUM_UIKeyboardAction },
 	{ "UIMouseButtonAction", ENUM_UIMouseButtonAction },
 	{ "UIMouseButtonType", ENUM_UIMouseButtonType },
 	{ "UIMouseWheelDirection", ENUM_UIMouseWheelDirection },
+	{ "UIJoystickHatDirection", ENUM_UIJoystickHatDirection },
+	{ "UIJoystickButtonAction", ENUM_UIJoystickButtonAction },
 	{ "UIExpandDirection", ENUM_UIExpandDirection },
 	{ "UIGradientDirection", ENUM_UIGradientDirection },
 	{ "UIMarginDirection", ENUM_UIMarginDirection },
+	{ "UITableRowAlignDirection", ENUM_UITableRowAlignDirection },
+	{ "UITableColumnAlignDirection", ENUM_UITableColumnAlignDirection },
 	{ "UISizeControl", ENUM_UISizeControl },
 	{ "UIFont", ENUM_UIFont },
 	{ 0, 0 },

@@ -1,3 +1,6 @@
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
+// Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
+
 uniform vec4 atmosColor;
 // to keep distances sane we do a nearer, smaller scam. this is how many times
 // smaller the geosphere has been made
@@ -8,6 +11,7 @@ uniform vec3 geosphereCenter;
 uniform float geosphereAtmosFogDensity;
 uniform float geosphereAtmosInvScaleHeight;
 
+#ifdef ECLIPSE
 uniform int shadows;
 uniform ivec3 occultedLight;
 uniform vec3 shadowCentreX;
@@ -16,6 +20,7 @@ uniform vec3 shadowCentreZ;
 uniform vec3 srad;
 uniform vec3 lrad;
 uniform vec3 sdivlrad;
+#endif // ECLIPSE
 
 varying vec4 varyingEyepos;
 
@@ -73,6 +78,7 @@ void main(void)
 		vec3 lightDir = normalize(vec3(gl_LightSource[0].position));
 
 		float uneclipsed = 1.0;
+#ifdef ECLIPSE
 		for (int j=0; j<shadows; j++) {
 			if (0 != occultedLight[j])
 				continue;
@@ -113,6 +119,7 @@ void main(void)
 
 			uneclipsed -= maxOcclusion * shadow / (bd-ad);
 		}
+#endif // ECLIPSE
 		uneclipsed = clamp(uneclipsed, 0.0, 1.0);
 
 		float nDotVP =  max(0.0, dot(surfaceNorm, lightDir));

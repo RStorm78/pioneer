@@ -1,10 +1,18 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "LuaTimer.h"
 #include "LuaUtils.h"
 #include "Game.h"
 #include "Pi.h"
+
+void LuaTimer::RemoveAll()
+{
+    lua_State *l = Lua::manager->GetLuaState();
+
+    lua_pushnil(l);
+    lua_setfield(l, LUA_REGISTRYINDEX, "PiTimerCallbacks");
+}
 
 void LuaTimer::Tick()
 {
@@ -240,11 +248,20 @@ template <> const char *LuaObject<LuaTimer>::s_type = "Timer";
 
 template <> void LuaObject<LuaTimer>::RegisterClass()
 {
+	lua_State *l = Lua::manager->GetLuaState();
+
+	LUA_DEBUG_START(l);
+
 	static const luaL_Reg l_methods[] = {
 		{ "CallAt",    l_timer_call_at    },
 		{ "CallEvery", l_timer_call_every },
 		{ 0, 0 }
 	};
 
-	LuaObjectBase::CreateClass(s_type, 0, l_methods, 0, 0);
+	lua_getfield(l, LUA_REGISTRYINDEX, "CoreImports");
+	LuaObjectBase::CreateObject(l_methods, 0, 0);
+	lua_setfield(l, -2, "Timer");
+	lua_pop(l, 1);
+
+	LUA_DEBUG_END(l, 0);
 }

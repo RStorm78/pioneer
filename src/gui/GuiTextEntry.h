@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _GUITEXTENTRY_H
@@ -27,20 +27,15 @@ namespace Gui {
 		std::string GetText() const { return m_text; }
 		void SetCursorPos(int pos) { m_cursPos = Clamp(pos, 0, signed(m_text.size())); }
 		int GetCursorPos() const { return m_cursPos; };
-		virtual bool OnKeyPress(const SDL_keysym *);
+		virtual bool OnKeyDown(const SDL_Keysym *);
+		virtual void OnTextInput(Uint32 unicode);
 		virtual void Show() { GrabFocus(); Widget::Show(); }
 		virtual void GrabFocus();
 		void Unfocus();
 		NewlineMode GetNewlineMode() const { return m_newlineMode; }
 		void SetNewlineMode(NewlineMode mode) { m_newlineMode = mode; }
 
-		// XXX probably a bad idea to use a signal with a return type
-		// (by default, the return value will be whatever is returned by the
-		//  last functor that's called when emitting the signal...
-		//  you can provide your own 'accumulator' type though, to combine
-		//  return values in different ways)
-		sigc::signal<bool, const SDL_keysym*> onFilterKeys;
-		sigc::signal<void, const SDL_keysym*> onKeyPress;
+		sigc::signal<void, const SDL_Keysym*> onKeyPress;
 		sigc::signal<void> onValueChanged;
 	private:
 

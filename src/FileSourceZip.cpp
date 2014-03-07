@@ -1,7 +1,8 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "FileSourceZip.h"
+#include "utils.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -16,10 +17,10 @@ namespace FileSystem {
 
 FileSourceZip::FileSourceZip(FileSourceFS &fs, const std::string &zipPath) : FileSource(zipPath), m_archive(0)
 {
-	mz_zip_archive *zip = reinterpret_cast<mz_zip_archive*>(std::calloc(1, sizeof(mz_zip_archive)));
+	mz_zip_archive *zip = static_cast<mz_zip_archive*>(std::calloc(1, sizeof(mz_zip_archive)));
 	FILE *file = fs.OpenReadStream(zipPath);
 	if (!mz_zip_reader_init_file_stream(zip, file, 0)) {
-		printf("FileSourceZip: unable to open '%s'\n", zipPath.c_str());
+		Output("FileSourceZip: unable to open '%s'\n", zipPath.c_str());
 		std::free(zip);
 		return;
 	}
@@ -41,13 +42,13 @@ FileSourceZip::FileSourceZip(FileSourceFS &fs, const std::string &zipPath) : Fil
 		}
 	}
 
-	m_archive = reinterpret_cast<void*>(zip);
+	m_archive = static_cast<void*>(zip);
 }
 
 FileSourceZip::~FileSourceZip()
 {
 	if (!m_archive) return;
-	mz_zip_archive *zip = reinterpret_cast<mz_zip_archive*>(m_archive);
+	mz_zip_archive *zip = static_cast<mz_zip_archive*>(m_archive);
 	mz_zip_reader_end(zip);
 }
 
@@ -111,7 +112,7 @@ FileInfo FileSourceZip::Lookup(const std::string &path)
 RefCountedPtr<FileData> FileSourceZip::ReadFile(const std::string &path)
 {
 	if (!m_archive) return RefCountedPtr<FileData>();
-	mz_zip_archive *zip = reinterpret_cast<mz_zip_archive*>(m_archive);
+	mz_zip_archive *zip = static_cast<mz_zip_archive*>(m_archive);
 
 	const Directory *dir;
 	std::string filename;
@@ -124,9 +125,9 @@ RefCountedPtr<FileData> FileSourceZip::ReadFile(const std::string &path)
 
 	const FileStat &st = (*i).second;
 
-	char *data = reinterpret_cast<char*>(std::malloc(st.size));
+	char *data = static_cast<char*>(std::malloc(st.size));
 	if (!mz_zip_reader_extract_to_mem(zip, st.index, data, st.size, 0)) {
-		printf("FileSourceZip::ReadFile: couldn't extract '%s'\n", path.c_str());
+		Output("FileSourceZip::ReadFile: couldn't extract '%s'\n", path.c_str());
 		return RefCountedPtr<FileData>();
 	}
 

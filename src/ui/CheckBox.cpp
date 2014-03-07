@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "CheckBox.h"
@@ -36,9 +36,27 @@ void CheckBox::Draw()
 	}
 }
 
-void CheckBox::HandleClick()
+void CheckBox::Toggle()
 {
 	m_checked = !m_checked;
+	onValueChanged.emit(m_checked);
+}
+
+bool CheckBox::IsChecked() const
+{
+	return m_checked;
+}
+
+void CheckBox::SetState(bool state)
+{
+	if (m_checked != state) {
+		Toggle();
+	}
+}
+
+void CheckBox::HandleClick()
+{
+	Toggle();
 }
 
 }

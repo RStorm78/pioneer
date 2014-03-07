@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "Context.h"
@@ -25,16 +25,21 @@ static const float FONT_SCALE[] = {
 	0.85f, // HEADING_SMALL
 	1.0f,  // HEADING_NORMAL
 	1.4f,  // HEADING_LARGE
-	1.8f   // HEADING_XLARGE
+	1.8f,  // HEADING_XLARGE
+
+	0.7f,  // MONO_XSMALL
+	0.85f, // MONO_SMALL
+	1.0f,  // MONO_NORMAL
+	1.4f,  // MONO_LARGE
+	1.8f   // MONO_XLARGE
 };
 
-Context::Context(LuaManager *lua, Graphics::Renderer *renderer, int width, int height, const std::string &lang) : Single(this),
+Context::Context(LuaManager *lua, Graphics::Renderer *renderer, int width, int height, const std::string &lang) : Container(this),
 	m_renderer(renderer),
 	m_width(width),
 	m_height(height),
 	m_scale(std::min(float(m_height)/SCALE_CUTOFF_HEIGHT, 1.0f)),
 	m_needsLayout(false),
-	m_float(new FloatContainer(this)),
 	m_eventDispatcher(this),
 	m_skin("ui/Skin.ini", renderer, GetScale()),
 	m_lua(lua)
@@ -44,9 +49,9 @@ Context::Context(LuaManager *lua, Graphics::Renderer *renderer, int width, int h
 	m_templateStore = LuaRef(l, -1);
 
 	SetSize(Point(m_width,m_height));
+	m_visible = true;
 
-	m_float->SetSize(Point(m_width,m_height));
-	m_float->Attach(this);
+	NewLayer();
 
 	// XXX should do point sizes, but we need display DPI first
 	// XXX TextureFont could load multiple sizes into the same object/atlas
@@ -66,33 +71,61 @@ Context::Context(LuaManager *lua, Graphics::Renderer *renderer, int width, int h
 			m_font[i] = RefCountedPtr<Text::TextureFont>(new Text::TextureFont(fontDesc, renderer));
 		}
 	}
+	{
+		const Text::FontDescriptor baseFontDesc(Text::FontDescriptor::Load(FileSystem::gameDataFiles, "fonts/UIMonoFont.ini", lang));
+		for (int i = FONT_MONO_SMALLEST; i <= FONT_MONO_LARGEST; i++) {
+			const Text::FontDescriptor fontDesc(baseFontDesc.filename, baseFontDesc.pixelWidth*FONT_SCALE[i]*GetScale(), baseFontDesc.pixelHeight*FONT_SCALE[i]*GetScale(), baseFontDesc.outline, baseFontDesc.advanceXAdjustment);
+
+			m_font[i] = RefCountedPtr<Text::TextureFont>(new Text::TextureFont(fontDesc, renderer));
+		}
+	}
 
 	m_scissorStack.push(std::make_pair(Point(0,0), Point(m_width,m_height)));
 }
 
-Context::~Context() {
-	m_float->Detach();
+Layer *Context::NewLayer()
+{
+	Layer *layer = new Layer(this);
+	AddWidget(layer);
+	SetWidgetDimensions(layer, Point(0), Point(m_width, m_height));
+	m_layers.push_back(layer);
+	m_needsLayout = true;
+	return layer;
+}
+
+void Context::DropLayer()
+{
+	// dropping the last layer would be bad
+	assert(m_layers.size() > 1);
+	RemoveWidget(m_layers.back());
+	m_layers.pop_back();
+	m_needsLayout = true;
+}
+
+void Context::DropAllLayers()
+{
+	for (std::vector<Layer*>::iterator i = m_layers.begin(); i != m_layers.end(); ++i)
+		RemoveWidget(*i);
+	m_layers.clear();
+	NewLayer();
+	m_needsLayout = true;
 }
 
 Widget *Context::GetWidgetAt(const Point &pos)
 {
-	Widget *w = m_float->GetWidgetAt(pos);
-	if (!w || w == m_float.Get())
-		w = Single::GetWidgetAt(pos);
-	return w;
+	return GetTopLayer()->GetWidgetAt(pos);
 }
 
 void Context::Layout()
 {
+	// some widgets (eg MultiLineText) can require two layout passes because we
+	// don't know their preferred size until after their first layout run. so
+	// then we have to do layout again to make sure everyone else gets it right
 	m_needsLayout = false;
 
-	m_float->Layout();
-	Single::Layout();
-
-	if (m_needsLayout) {
-		m_float->Layout();
-		Single::Layout();
-	}
+	LayoutChildren();
+	if (m_needsLayout)
+		LayoutChildren();
 
 	m_needsLayout = false;
 
@@ -101,29 +134,26 @@ void Context::Layout()
 
 void Context::Update()
 {
-	m_eventDispatcher.Update();
-
 	if (m_needsLayout)
 		Layout();
 
-	m_float->Update();
-	Single::Update();
+	Container::Update();
 }
 
 void Context::Draw()
 {
 	Graphics::Renderer *r = GetRenderer();
 
-	r->SetOrthographicProjection(0, m_width, m_height, 0, -1, 1);
-	r->SetTransform(matrix4x4f::Identity());
-	r->SetClearColor(Color::BLACK);
-	r->SetBlendMode(Graphics::BLEND_ALPHA);
-	r->SetDepthTest(false);
+	// reset renderer for each layer
+	for (std::vector<Layer*>::iterator i = m_layers.begin(); i != m_layers.end(); ++i) {
+		r->SetOrthographicProjection(0, m_width, m_height, 0, -1, 1);
+		r->SetTransform(matrix4x4f::Identity());
+		r->SetClearColor(Color::BLACK);
 
-	Single::Draw();
-	m_float->Draw();
+		(*i)->Draw();
 
-	r->SetScissor(false);
+		r->SetScissor(false);
+	}
 }
 
 Widget *Context::CallTemplate(const char *name, const LuaTable &args)

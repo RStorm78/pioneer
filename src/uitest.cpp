@@ -1,3 +1,6 @@
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
+// Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
+
 #include <cstdlib>
 #include "SDL.h"
 #include "ui/Context.h"
@@ -6,6 +9,7 @@
 #include "graphics/Renderer.h"
 #include "Lua.h"
 #include "PropertiedObject.h"
+#include "OS.h"
 #include <typeinfo>
 
 static const int WIDTH  = 1024;
@@ -27,31 +31,31 @@ public:
 static bool toggle_disabled_handler(UI::Widget *w)
 {
 	w->IsDisabled() ? w->Enable() : w->Disable();
-	printf("toggle disabled: %p %s now %s\n", w, typeid(*w).name(), w->IsDisabled() ? "DISABLED" : "ENABLED");
+	Output("toggle disabled: %p %s now %s\n", w, typeid(*w).name(), w->IsDisabled() ? "DISABLED" : "ENABLED");
 	return true;
 }
 
 static bool click_handler(UI::Widget *w)
 {
-	printf("click: %p %s\n", w, typeid(*w).name());
+	Output("click: %p %s\n", w, typeid(*w).name());
 	return true;
 }
 
 static bool move_handler(const UI::MouseMotionEvent &event, UI::Widget *w)
 {
-	printf("move: %p %s %d,%d\n", w, typeid(*w).name(), event.pos.x, event.pos.y);
+	Output("move: %p %s %d,%d\n", w, typeid(*w).name(), event.pos.x, event.pos.y);
 	return true;
 }
 
 static bool over_handler(UI::Widget *w)
 {
-	printf("over: %p %s\n", w, typeid(*w).name());
+	Output("over: %p %s\n", w, typeid(*w).name());
 	return true;
 }
 
 static bool out_handler(UI::Widget *w)
 {
-	printf("out: %p %s\n", w, typeid(*w).name());
+	Output("out: %p %s\n", w, typeid(*w).name());
 	return true;
 }
 
@@ -62,7 +66,7 @@ static void colour_change(float v, UI::ColorBackground *back, UI::Slider *r, UI:
 
 static void option_selected(unsigned int index, const std::string &option)
 {
-	printf("option selected: %d %s\n", index, option.c_str());
+	Output("option selected: %d %s\n", index, option.c_str());
 }
 
 static void fill_label(float v, UI::Label *label)
@@ -106,76 +110,58 @@ int main(int argc, char **argv)
 	FileSystem::Init();
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		fprintf(stderr, "sdl init failed: %s\n", SDL_GetError());
+		Output("sdl init failed: %s\n", SDL_GetError());
 		exit(-1);
 	}
-
-	SDL_EnableUNICODE(1);
-
-    const SDL_VideoInfo *info = SDL_GetVideoInfo();
-    switch (info->vfmt->BitsPerPixel) {
-        case 16:
-            SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-            SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
-            SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-            SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-            break;
-        case 24:
-        case 32:
-            SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-            SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-            SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-            SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-            break;
-        default:
-            fprintf(stderr, "invalid pixel depth: %d bpp\n", info->vfmt->BitsPerPixel);
-            exit(-1);
-    }
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
-
-	SDL_Surface *surface = SDL_SetVideoMode(WIDTH, HEIGHT, info->vfmt->BitsPerPixel, SDL_OPENGL);
-	if (!surface) {
-		fprintf(stderr, "sdl video mode init failed: %s\n", SDL_GetError());
-		SDL_Quit();
-		exit(-1);
-	}
-
-	SDL_WM_SetCaption("uitest", "uitest");
 
 	Graphics::Settings videoSettings;
 	videoSettings.width = WIDTH;
 	videoSettings.height = HEIGHT;
 	videoSettings.fullscreen = false;
-	videoSettings.shaders = false;
 	videoSettings.requestedSamples = 0;
 	videoSettings.vsync = false;
 	videoSettings.useTextureCompression = false;
+	videoSettings.enableDebugMessages = false;
+	videoSettings.iconFile = OS::GetIconFilename();
+	videoSettings.title = "uitest";
+
 	Graphics::Renderer *r = Graphics::Init(videoSettings);
 
 	Lua::Init();
 
-	RefCountedPtr<UI::Context> c(new UI::Context(Lua::manager, r, WIDTH, HEIGHT, "English"));
+	RefCountedPtr<UI::Context> c(new UI::Context(Lua::manager, r, WIDTH, HEIGHT, "en"));
+
+	UI::VBox *box = c->VBox();
+	for (int i = 0; i < 2; i++) {
+		box->PackEnd(UI::WidgetSet(
+			c->ColorBackground(Color4ub(rand()%256,rand()%256,rand()%256,255).ToColor4f())
+				->SetInnerWidget(c->Image("icons/object_star_m.png", UI::Widget::PRESERVE_ASPECT | UI::Widget::EXPAND_HEIGHT)),
+			c->ColorBackground(Color4ub(rand()%256,rand()%256,rand()%256,255).ToColor4f())
+				->SetInnerWidget(c->Label("foo"))
+			)
+		);
+	}
+	c->GetTopLayer()->SetInnerWidget(box);
 
 #if 0
 	UI::Gauge *gauge;
-	c->SetInnerWidget(c->HBox()->PackEnd(gauge = c->Gauge()));
+	c->GetTopLayer()->SetInnerWidget(c->HBox()->PackEnd(gauge = c->Gauge()));
 	gauge->SetWarningLevel(0.4f);
 	gauge->SetCriticalLevel(0.2f);
 	gauge->SetLevelAscending(false);
+	gauge->SetUpperValue(14.0f);
 #endif
 
 #if 0
 	Thing thing(Lua::manager);
 
 	UI::Label *l = c->Label("label");
-	c->SetInnerWidget(l);
+	c->GetTopLayer()->SetInnerWidget(l);
 
 	l->Bind("text", &thing, "time");
 
 
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->VBox(10)->PackEnd(UI::WidgetSet(
 			c->Background()->SetInnerWidget(
 				c->HBox(5)->PackEnd(UI::WidgetSet(
@@ -196,7 +182,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::Button *toggle;
 	UI::CheckBox *target;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->HBox(10)->PackEnd(UI::WidgetSet(
 			(toggle = c->Button()),
 			(target = static_cast<UI::CheckBox*>(c->CheckBox()))
@@ -210,7 +196,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->ColorBackground(Color(0.4f, 0.2f, 0.4f, 1.0f))->SetInnerWidget(
 			c->HBox()->PackEnd(UI::WidgetSet(
 				c->Icon("Agenda"),
@@ -225,14 +211,14 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Margin(0)->SetInnerWidget(c->Gradient(Color(1.0f,0,0,1.0f), Color(0,0,1.0f,1.0f), UI::Gradient::HORIZONTAL))
 	);
 #endif
 
 #if 0
 	UI::Button *b1, *b2, *b3;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->VBox()->PackEnd(UI::WidgetSet(
 			c->Margin(10.0f)->SetInnerWidget(
 				(b1 = c->Button())
@@ -263,7 +249,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::Image *image;
 	UI::Slider *slider;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->ColorBackground(Color(0.4f, 0.2f, 0.4f, 1.0f))->SetInnerWidget(
 			c->Margin(10.0f)->SetInnerWidget(
 				c->ColorBackground(Color(0.1f, 0.4f, 0.4f, 1.0f))->SetInnerWidget(
@@ -295,7 +281,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::Slider *red, *green, *blue;
 	UI::ColorBackground *back;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->VBox(5.0f)->PackEnd(UI::WidgetSet(
 			c->HBox(5.0f)->PackEnd(c->Label("Red"))->PackEnd(red = c->HSlider()),
 			c->HBox(5.0f)->PackEnd(c->Label("Green"))->PackEnd(green = c->HSlider()),
@@ -309,7 +295,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		//c->Grid(UI::CellSpec(0.2f,0.8f), UI::CellSpec(0.7f,0.3f))
 		c->Grid(3,3)
 			->SetRow(0, UI::WidgetSet(
@@ -326,7 +312,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::ColorBackground *back[4];
 	UI::Button *button[5];
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Grid(2,2)
 			->SetRow(0, UI::WidgetSet(
 				(back[0] = c->ColorBackground(Color(0.8f,0.2f,0.2f))),
@@ -365,7 +351,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::DropDown *dropdown;
 	UI::List *list;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->VBox()->PackEnd(UI::WidgetSet(
 			c->HBox()->PackEnd(
 				(dropdown = c->DropDown()
@@ -393,7 +379,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Scroller()->SetInnerWidget(
 			c->MultiLineText(
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus consectetur risus augue. Aenean porttitor enim dolor, vitae iaculis mi. Etiam a nibh at massa dictum blandit. Etiam sed varius quam. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Praesent facilisis tortor nisi. Maecenas ut enim nulla, pharetra elementum dolor. Vivamus condimentum semper magna laoreet gravida. Proin vulputate odio eget metus tristique tristique. Donec viverra augue quis velit lacinia vel dapibus diam volutpat. Fusce laoreet dui sit amet magna sagittis porttitor. Fusce sodales nulla id eros vehicula at pulvinar nisl facilisis. In ut neque lorem, ut vehicula tellus. Donec a posuere quam.\n\n"
@@ -424,7 +410,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::Label *label;
 	UI::Slider *slider;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->HBox(5.0f)->PackEnd(label = c->Label(""))->PackEnd(slider = c->HSlider()),
 	);
 	slider->onValueChanged.connect(sigc::bind(sigc::ptr_fun(&fill_label), label));
@@ -433,7 +419,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::DropDown *dropdown;
 	UI::Button *add, *clear;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Margin(10.0f)->SetInnerWidget(
 			c->VBox()->PackEnd(UI::WidgetSet(
 				c->HBox()->PackEnd(UI::WidgetSet(
@@ -453,7 +439,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->VBox()->PackEnd(UI::WidgetSet(
 			c->Label("through three cheese trees three freezy fleas flew")->SetFont(UI::Widget::FONT_XSMALL),
 			c->Label("through three cheese trees three freezy fleas flew")->SetFont(UI::Widget::FONT_SMALL),
@@ -467,7 +453,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::VBox *box;
 	UI::Button *b1, *b2, *b3, *b4;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		(box = c->VBox())->PackEnd(UI::WidgetSet(
 			(b1 = c->Button())->SetInnerWidget(c->Label("remove other")),
 			(b2 = c->Button())->SetInnerWidget(c->Label("other")),
@@ -492,7 +478,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Grid(3,3)
 			->SetRow(0, UI::WidgetSet(
 				c->ColorBackground(Color(0.8f,0.2f,0.2f))->SetInnerWidget(c->Align(UI::Align::TOP_LEFT)->SetInnerWidget(c->Image("icons/object_star_m.png"))),
@@ -511,7 +497,7 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-    c->SetInnerWidget(
+    c->GetTopLayer()->SetInnerWidget(
         c->VBox()->PackEnd(
             c->Grid(2,2)
                 ->SetRow(0, UI::WidgetSet(c->Label("one"), c->Label("two")))
@@ -522,7 +508,7 @@ int main(int argc, char **argv)
 
 #if 0
 	UI::MultiLineText *text;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		c->Scroller()->SetInnerWidget(
 			(text = c->MultiLineText(""))
 		)
@@ -532,7 +518,7 @@ int main(int argc, char **argv)
 #if 0
 	UI::VBox *box;
 	UI::Button *b1, *b2, *b3, *b4;
-	c->SetInnerWidget(
+	c->GetTopLayer()->SetInnerWidget(
 		(box = c->VBox())->PackEnd(UI::WidgetSet(
 			(b1 = c->Button())->SetInnerWidget(c->Label("1")),
 			(b2 = c->Button())->SetInnerWidget(c->Label("2")),
@@ -551,6 +537,7 @@ int main(int argc, char **argv)
 	b4->AddShortcut(UI::KeySym::FromString("ctrl+shift+4"));
 #endif
 
+#if 0
 	UI::Table *table;
 	table = c->Table();
 	table->SetFont(UI::Widget::FONT_LARGE);
@@ -559,6 +546,7 @@ int main(int argc, char **argv)
 		c->Label("ten"),
 		c->Label("twenty")
 	));
+	table->SetMouseEnabled(true);
 	for (char ch = 'a'; ch <= 'z'; ch++) {
 		static char buf[32];
 		memset(buf, ch, sizeof(buf));
@@ -571,7 +559,49 @@ int main(int argc, char **argv)
 		l1 = c->Label(buf);
 		table->AddRow(UI::WidgetSet(l1, l2, l3));
 	}
-	c->SetInnerWidget(c->Grid(2,1)->SetCell(0,0,table));
+	c->GetTopLayer()->SetInnerWidget(c->Grid(2,1)->SetCell(0,0,table));
+#endif
+
+#if 0
+	UI::DropDown *d1, *d2;
+	c->GetTopLayer()->SetInnerWidget(
+		c->VBox()->PackEnd(UI::WidgetSet(
+			(d1 = c->DropDown()
+				->AddOption("watermelon")
+				->AddOption("banana")
+				->AddOption("ox tongue")
+			),
+			(d2 = c->DropDown()
+				->AddOption("coffee")
+				->AddOption("beer")
+				->AddOption("a single plum floating in perfume served in a man's hat")
+			)
+		))
+	);
+	c->onClick.connect(sigc::bind(sigc::ptr_fun(&click_handler), c.Get()));
+	d1->onMouseOver.connect(sigc::bind(sigc::ptr_fun(&over_handler), d1));
+	d1->onMouseOut.connect(sigc::bind(sigc::ptr_fun(&out_handler), d1));
+	d2->onMouseOver.connect(sigc::bind(sigc::ptr_fun(&over_handler), d2));
+	d2->onMouseOut.connect(sigc::bind(sigc::ptr_fun(&out_handler), d2));
+#endif
+
+#if 0
+	c->GetTopLayer()->SetInnerWidget(
+		c->Align(UI::Align::MIDDLE)->SetInnerWidget(
+			c->Background()->SetInnerWidget(
+				c->MultiLineText("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+			)
+		)
+	);
+#endif
+
+#if 0
+	UI::Table *t = c->Table();
+	t->AddRow(c->MultiLineText("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."));
+	t->AddRow(c->MultiLineText("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."));
+	t->AddRow(c->MultiLineText("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."));
+	c->GetTopLayer()->SetInnerWidget(t);
+#endif
 
 	//int count = 0;
 
@@ -598,7 +628,7 @@ int main(int argc, char **argv)
 //		thing.Update();
 
 //		slider->SetValue(slider->GetValue() + 0.01);
-//		gauge->SetValue(gauge->GetValue() + 0.001);
+//		gauge->SetValue(gauge->GetValue() + 0.1);
 
 #if 0
 		if (++count == 400) {
@@ -609,7 +639,7 @@ int main(int argc, char **argv)
 			c->Layout();
 		}
 		else if (count < 400 && count % 10 == 0)
-			printf("%d\n", count);
+			Output("%d\n", count);
 #endif
 
 #if 0

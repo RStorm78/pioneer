@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "LuaObject.h"
@@ -58,7 +58,7 @@ static int l_body_attr_seed(lua_State *l)
 	const SystemBody *sbody = b->GetSystemBody();
 	assert(sbody);
 
-	lua_pushinteger(l, sbody->seed);
+	lua_pushinteger(l, sbody->GetSeed());
 	return 1;
 }
 
@@ -88,7 +88,7 @@ static int l_body_attr_path(lua_State *l)
 		return 1;
 	}
 
-	const SystemPath path(sbody->path);
+	const SystemPath path(sbody->GetPath());
 	LuaObject<SystemPath>::PushToLua(path);
 
 	return 1;
@@ -118,7 +118,7 @@ static int l_body_attr_type(lua_State *l)
 		return 1;
 	}
 
-	lua_pushstring(l, EnumStrings::GetString("BodyType", sbody->type));
+	lua_pushstring(l, EnumStrings::GetString("BodyType", sbody->GetType()));
 	return 1;
 }
 

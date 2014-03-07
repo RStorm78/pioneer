@@ -1,38 +1,88 @@
--- Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+-- Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 -- Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
-local ui = Engine.ui
-local t = Translate:GetTranslator()
+local Engine = import("Engine")
+local Lang = import("Lang")
+local Game = import("Game")
+local Ship = import("Ship")
+local Player = import("Player")
+local SystemPath = import("SystemPath")
+local ErrorScreen = import("ErrorScreen")
 
-local setupPlayerWave = function ()
-	Game.player:SetShipType("wave")
+local ui = Engine.ui
+local l = Lang.GetResource("ui-core");
+
+local setupPlayerSol = function ()
+	Game.player:SetShipType("sinonatrix")
+	Game.player:SetLabel(Ship.MakeRandomLabel())
 	Game.player:AddEquip("PULSECANNON_1MW")
 	Game.player:AddEquip("ATMOSPHERIC_SHIELDING")
 	Game.player:AddEquip("AUTOPILOT")
 	Game.player:AddEquip("SCANNER")
-	Game.player:AddEquip("MISSILE_GUIDED", 2)
 	Game.player:AddEquip("HYDROGEN", 2)
 	Game.player:SetMoney(100)
 end
 
+local setupPlayerEridani = function ()
+	Game.player:SetShipType("pumpkinseed")
+	Game.player:SetLabel(Ship.MakeRandomLabel())
+	Game.player:AddEquip("PULSECANNON_1MW")
+	Game.player:AddEquip("ATMOSPHERIC_SHIELDING")
+	Game.player:AddEquip("AUTOPILOT")
+	Game.player:AddEquip("SCANNER")
+	Game.player:AddEquip("HYDROGEN", 2)
+	Game.player:SetMoney(100)
+end
+
+local setupPlayerBarnard = function ()
+	Game.player:SetShipType("xylophis")
+	Game.player:SetLabel(Ship.MakeRandomLabel())
+	--Game.player:AddEquip("PULSECANNON_1MW")
+	Game.player:AddEquip("ATMOSPHERIC_SHIELDING")
+	Game.player:AddEquip("AUTOPILOT")
+	Game.player:AddEquip("SCANNER")
+	Game.player:AddEquip("HYDROGEN", 2)
+	Game.player:SetMoney(100)
+end
+
+local loadGame = function (path)
+	local ok, err = pcall(Game.LoadGame, path)
+	if not ok then
+		ErrorScreen.ShowError(l.COULD_NOT_LOAD_GAME .. err)
+	end
+end
+
 local doLoadDialog = function ()
-	ui:SetInnerWidget(
+	ui:NewLayer(
 		ui.templates.FileDialog({
-			title       = t("Select game to load..."),
+			title       = l.LOAD,
+			helpText    = l.SELECT_GAME_TO_LOAD,
 			path        = "savefiles",
-			selectLabel = t("Load game"),
-			onSelect    = function (filename) Game.LoadGame(filename) end,
-			onCancel    = function () ui:SetInnerWidget(ui.templates.MainMenu()) end
+			selectLabel = l.LOAD_GAME,
+			onSelect    = loadGame,
+			onCancel    = function () ui:DropLayer() end
+		})
+	)
+end
+
+local doSettingsScreen = function()
+	ui.layer:SetInnerWidget(
+		ui.templates.Settings({
+			closeButtons = {
+				{ text = l.RETURN_TO_MENU, onClick = function () ui.layer:SetInnerWidget(ui.templates.MainMenu()) end }
+			}
 		})
 	)
 end
 
 local buttonDefs = {
-	{ t("Start at Earth"),    function () Game.StartGame(SystemPath.New(0,0,0,0,9))   setupPlayerWave() end },
-	{ t("Start at New Hope"), function () Game.StartGame(SystemPath.New(1,-1,-1,0,4)) setupPlayerWave() end },
-	{ t("Load game"),         doLoadDialog },
-	{ t("Options"),           function () Engine.SettingsView() end },
-	{ t("Quit"),              function () Engine.Quit() end },
+	{ l.QUICKLOAD,              function () loadGame("_quicksave") end },
+	{ l.START_AT_EARTH,         function () Game.StartGame(SystemPath.New(0,0,0,0,6),48600)   setupPlayerSol() end },
+	{ l.START_AT_NEW_HOPE,      function () Game.StartGame(SystemPath.New(1,-1,-1,0,4)) setupPlayerEridani() end },
+	{ l.START_AT_BARNARDS_STAR, function () Game.StartGame(SystemPath.New(-1,0,0,0,1))  setupPlayerBarnard() end },
+	{ l.LOAD_GAME,              doLoadDialog },
+	{ l.OPTIONS,                doSettingsScreen },
+	{ l.QUIT,                   function () Engine.Quit() end },
 }
 
 

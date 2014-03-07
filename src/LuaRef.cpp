@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "LuaRef.h"
@@ -25,9 +25,10 @@ const LuaRef & LuaRef::operator=(const LuaRef & ref) {
 }
 
 LuaRef::~LuaRef() {
-	if (m_id != LUA_NOREF && m_lua)
+	if (m_id != LUA_NOREF && m_lua) {
 		--(*m_copycount);
-	CheckCopyCount();
+		CheckCopyCount();
+	}
 }
 
 bool LuaRef::operator==(const LuaRef & ref) const {

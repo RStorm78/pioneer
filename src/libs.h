@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _LIBS_H
@@ -10,7 +10,6 @@
 #include <cstdio>
 #include <sigc++/sigc++.h>
 #include <SDL.h>
-#include <GL/glew.h>
 #include <SDL_image.h>
 #include <cfloat>
 #include <limits>
@@ -18,9 +17,15 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cerrno>
+#include <cstring>
 #include <string>
+#include <deque>
 #include <vector>
 #include <map>
+#include <algorithm>
+#include <memory>
+
+#include "glew/glew.h"
 
 #ifdef _WIN32
 #	include <malloc.h>
@@ -33,16 +38,11 @@
 #	endif
 
 #	ifndef __MINGW32__
-#
 #		define alloca _alloca
 #		define strncasecmp _strnicmp
 #		define strcasecmp _stricmp
 #		define snprintf _snprintf
-
-#		ifndef isfinite
-inline int isfinite(double x) { return _finite(x); }
-#		endif
-#	endif /* __MINGW32__ */
+#	endif
 #endif
 
 #ifdef _MSC_VER // MSVC doesn't support the %z specifier, but has its own %I specifier
@@ -63,6 +63,8 @@ inline int isfinite(double x) { return _finite(x); }
 #include "FloatComparison.h"
 #include "SmartPtr.h"
 #include "RefCounted.h"
+
+#include "profiler/Profiler.h"
 
 #ifdef NDEBUG
 #define	PiVerify(x) ((void)(x))

@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef UI_LIST_H
@@ -17,8 +17,15 @@ public:
 	virtual void Layout();
 
 	List *AddOption(const std::string &text);
-	const std::string &GetSelectedOption();
 	void Clear();
+
+	size_t NumItems() const { return m_options.size(); }
+	bool IsEmpty() const { return m_options.empty(); }
+
+	const std::string &GetSelectedOption() const;
+	bool SetSelectedOption(const std::string &option);
+	int GetSelectedIndex() const;
+	void SetSelectedIndex(const int index);
 
 	sigc::signal<void,unsigned int,const std::string &> onOptionSelected;
 

@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "Margin.h"
@@ -7,8 +7,26 @@ namespace UI {
 
 Point Margin::PreferredSize()
 {
-	if (!GetInnerWidget()) return Point(m_margin*2.0f);
-	return SizeAdd(GetInnerWidget()->CalcLayoutContribution(), Point(m_margin*2.0f));
+	Point extra;
+	switch (m_direction) {
+		case ALL:
+			extra = Point(m_margin*2, m_margin*2);
+			break;
+		case HORIZONTAL:
+			extra = Point(m_margin*2, 0);
+			break;
+		case VERTICAL:
+			extra = Point(0, m_margin*2);
+			break;
+		case LEFT: case RIGHT:
+			extra = Point(m_margin, 0);
+			break;
+		case TOP: case BOTTOM:
+			extra = Point(0, m_margin);
+			break;
+	}
+	if (!GetInnerWidget()) return extra;
+	return SizeAdd(GetInnerWidget()->CalcLayoutContribution(), extra);
 }
 
 void Margin::Layout()

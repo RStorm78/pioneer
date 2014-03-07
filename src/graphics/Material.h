@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _MATERIAL_H
@@ -18,7 +18,6 @@
 namespace Graphics {
 
 class Texture;
-class RendererLegacy;
 class RendererGL2;
 
 // Shorthand for unique effects
@@ -31,7 +30,19 @@ enum EffectType {
 	EFFECT_GEOSPHERE_TERRAIN,
 	EFFECT_GEOSPHERE_TERRAIN_WITH_LAVA,
 	EFFECT_GEOSPHERE_TERRAIN_WITH_WATER,
-	EFFECT_GEOSPHERE_SKY
+	EFFECT_GEOSPHERE_SKY,
+	EFFECT_FRESNEL_SPHERE,
+	EFFECT_SHIELD,
+	EFFECT_SKYBOX,
+	EFFECT_SPHEREIMPOSTOR
+};
+
+
+// XXX : there must be a better place to put this
+enum MaterialQuality {
+	HAS_ATMOSPHERE		= 1 << 0,
+	HAS_ECLIPSES		= 1 << 1,
+	HAS_HEAT_GRADIENT   = 1 << 2
 };
 
 // Renderer creates a material that best matches these requirements.
@@ -41,15 +52,14 @@ public:
 	MaterialDescriptor();
 	EffectType effect;
 	bool alphaTest;
-	bool atmosphere;
 	bool glowMap;
 	bool lighting;
 	bool specularMap;
-	bool twoSided;
 	bool usePatterns; //pattern/color system
 	bool vertexColors;
-	int textures; //texture count
-	unsigned int dirLights; //set by rendererGL2 if lighting == true
+	Sint32 textures; //texture count
+	Uint32 dirLights; //set by rendererGL2 if lighting == true
+	Uint32 quality; // see: Graphics::MaterialQuality
 
 	friend bool operator==(const MaterialDescriptor &a, const MaterialDescriptor &b);
 };
@@ -67,6 +77,7 @@ public:
 	Texture *texture2;
 	Texture *texture3;
 	Texture *texture4;
+	Texture *heatGradient;
 
 	Color diffuse;
 	Color specular;
@@ -75,9 +86,6 @@ public:
 
 	virtual void Apply() { }
 	virtual void Unapply() { }
-
-	//in practice disables backface culling
-	bool twoSided;
 
 	void *specialParameter0; //this can be whatever. Bit of a hack.
 
@@ -88,7 +96,6 @@ protected:
 	MaterialDescriptor m_descriptor;
 
 private:
-	friend class RendererLegacy;
 	friend class RendererGL2;
 };
 

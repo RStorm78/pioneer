@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _FILESYSTEM_H
@@ -143,7 +143,7 @@ namespace FileSystem {
 	class FileDataMalloc : public FileData {
 	public:
 		FileDataMalloc(const FileInfo &info, size_t size):
-			FileData(info, size, reinterpret_cast<char*>(std::malloc(size))) {}
+			FileData(info, size, static_cast<char*>(std::malloc(size))) {}
 		FileDataMalloc(const FileInfo &info, size_t size, char *data):
 			FileData(info, size, data) {}
 		virtual ~FileDataMalloc() { std::free(m_data); }

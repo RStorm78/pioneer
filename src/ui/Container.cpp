@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "Container.h"
@@ -16,7 +16,11 @@ Container::~Container()
 
 void Container::Update()
 {
-	for (std::vector< RefCountedPtr<Widget> >::iterator i = m_widgets.begin(); i != m_widgets.end(); ++i)
+	// widgets can add/remove other widgets during Update. that screws up the
+	// iterators when traversing the widget list.  rather than try and detect
+	// it, we just take a copy of the list
+	std::vector< RefCountedPtr<Widget> > widgets = m_widgets;
+	for (std::vector< RefCountedPtr<Widget> >::iterator i = widgets.begin(); i != widgets.end(); ++i)
 		(*i)->Update();
 }
 
@@ -89,13 +93,27 @@ void Container::Enable()
 	Widget::Enable();
 }
 
+void Container::NotifyVisible(bool visible)
+{
+	if (m_visible != visible) {
+		m_visible = visible;
+		if (m_visible) { HandleVisible(); } else { HandleInvisible(); }
+
+		for (std::vector< RefCountedPtr<Widget> >::iterator i = m_widgets.begin(); i != m_widgets.end(); ++i) {
+			Widget *w = (*i).Get();
+			w->NotifyVisible(visible);
+		}
+	}
+}
+
 void Container::DisableChildren()
 {
 	for (std::vector< RefCountedPtr<Widget> >::iterator i = m_widgets.begin(); i != m_widgets.end(); ++i) {
 		Widget *w = (*i).Get();
 		w->SetDisabled(true);
-		Container *c = dynamic_cast<Container*>(w);
-		if (c) c->DisableChildren();
+		if (w->IsContainer()) {
+			static_cast<Container*>(w)->DisableChildren();
+		}
 	}
 }
 
@@ -104,8 +122,9 @@ void Container::EnableChildren()
 	for (std::vector< RefCountedPtr<Widget> >::iterator i = m_widgets.begin(); i != m_widgets.end(); ++i) {
 		Widget *w = (*i).Get();
 		w->SetDisabled(false);
-		Container *c = dynamic_cast<Container*>(w);
-		if (c) c->EnableChildren();
+		if (w->IsContainer()) {
+			static_cast<Container*>(w)->EnableChildren();
+		}
 	}
 }
 
@@ -120,14 +139,13 @@ Widget *Container::GetWidgetAt(const Point &pos)
 {
 	if (!Contains(pos)) return 0;
 
-	for (WidgetIterator i = WidgetsBegin(); i != WidgetsEnd(); ++i) {
-		Widget *widget = (*i).Get();
+	for (RefCountedPtr<Widget> widget : GetWidgets()) {
 		const Point relpos = pos - widget->GetPosition() - widget->GetDrawOffset();
 		if (widget->IsContainer()) {
-			Widget* w = static_cast<Container*>(widget)->GetWidgetAt(relpos);
+			Widget* w = static_cast<Container*>(widget.Get())->GetWidgetAt(relpos);
 			if (w) return w;
 		} else if (widget->Contains(relpos))
-			return widget;
+			return widget.Get();
 	}
 
 	return this;
@@ -142,15 +160,14 @@ void Container::CollectShortcuts(std::map<KeySym,Widget*> &shortcuts)
 			shortcuts[*j] = this;
 	}
 
-	for (WidgetIterator i = WidgetsBegin(); i != WidgetsEnd(); ++i) {
-		Widget *widget = (*i).Get();
+	for (RefCountedPtr<Widget> widget : GetWidgets()) {
 		if (widget->IsContainer())
-			static_cast<Container*>(widget)->CollectShortcuts(shortcuts);
+			static_cast<Container*>(widget.Get())->CollectShortcuts(shortcuts);
 		else {
 			const std::set<KeySym> &widgetShortcuts = widget->GetShortcuts();
 			if (!widgetShortcuts.empty())
 				for (std::set<KeySym>::const_iterator j = widgetShortcuts.begin(); j != widgetShortcuts.end(); ++j)
-					shortcuts[*j] = widget;
+					shortcuts[*j] = widget.Get();
 		}
 	}
 }

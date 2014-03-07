@@ -1,9 +1,10 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "libs.h"
 #include "Pi.h"
 #include "ModelViewer.h"
+#include "utils.h"
 #include <cstdio>
 
 enum RunMode {
@@ -16,6 +17,10 @@ enum RunMode {
 
 int main(int argc, char** argv)
 {
+#ifdef PIONEER_PROFILER
+	Profiler::detect( argc, argv );
+#endif
+
 	RunMode mode = MODE_GAME;
 
 	if (argc > 1) {
@@ -53,10 +58,27 @@ int main(int argc, char** argv)
 start:
 
 	switch (mode) {
-		case MODE_GAME:
-			Pi::Init();
+		case MODE_GAME: {
+			std::map<std::string,std::string> options;
+			if (argc > 2) {
+				static const std::string delim("=");
+				int pos = 2;
+				for (; pos < argc; pos++) {
+					const std::string arg(argv[pos]);
+					size_t mid = arg.find_first_of(delim, 0);
+					if (mid == std::string::npos || mid == 0 || mid == arg.length()-1) {
+						Output("malformed option: %s\n", arg.c_str());
+						return 1;
+					}
+					const std::string key(arg.substr(0, mid));
+					const std::string val(arg.substr(mid+1, arg.length()));
+					options[key] = val;
+				}
+			}
+			Pi::Init(options);
 			for (;;) Pi::Start();
 			break;
+		}
 
 		case MODE_MODELVIEWER: {
 			std::string modelName;
@@ -69,16 +91,16 @@ start:
 		case MODE_VERSION: {
 			std::string version(PIONEER_VERSION);
 			if (strlen(PIONEER_EXTRAVERSION)) version += " (" PIONEER_EXTRAVERSION ")";
-			fprintf(stderr, "pioneer %s\n", version.c_str());
+			Output("pioneer %s\n", version.c_str());
 			break;
 		}
 
 		case MODE_USAGE_ERROR:
-			fprintf(stderr, "pioneer: unknown mode %s\n", argv[1]);
+			Output("pioneer: unknown mode %s\n", argv[1]);
 			// fall through
 
 		case MODE_USAGE:
-			fprintf(stderr,
+			Output(
 				"usage: pioneer [mode] [options...]\n"
 				"available modes:\n"
 				"    -game        [-g]     game (default)\n"

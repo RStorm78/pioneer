@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _SFX_H
@@ -6,11 +6,12 @@
 
 #include "Body.h"
 #include "Serializer.h"
+#include "graphics/Material.h"
+#include "graphics/RenderState.h"
 
 class Frame;
 namespace Graphics {
 	class Renderer;
-	class Material;
 	namespace Drawables {
 		class Sphere3D;
 	}
@@ -34,11 +35,12 @@ public:
 	//create shared models
 	static void Init(Graphics::Renderer *r);
 	static void Uninit();
-	static Graphics::Drawables::Sphere3D *shieldEffect;
 	static Graphics::Drawables::Sphere3D *explosionEffect;
 	static Graphics::Material *damageParticle;
 	static Graphics::Material *ecmParticle;
 	static Graphics::Material *smokeParticle;
+	static Graphics::RenderState *alphaState;
+	static Graphics::RenderState *additiveAlphaState;
 
 private:
 	static Sfx *AllocSfxInFrame(Frame *f);

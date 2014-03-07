@@ -1,4 +1,4 @@
--- Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+-- Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 -- Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 --
@@ -7,8 +7,11 @@
 -- Functions for generating names.
 --
 
+local Engine = import("Engine")
+
 local r = function (t, rand) return t[rand:Integer(1,#t)] end
 
+local NameGen
 NameGen = {
 	firstNames = {
 		male   = {},
@@ -339,3 +342,5 @@ NameGen.surfaceStarportFormats = {
 	"{name}ton",
 	"{name}ville",
 }
+
+return NameGen

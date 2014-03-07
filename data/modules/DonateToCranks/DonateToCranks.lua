@@ -1,13 +1,42 @@
--- Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+-- Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 -- Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
--- Get the translator function
-local t = Translate:GetTranslator()
+local Engine = import("Engine")
+local Lang = import("Lang")
+local Game = import("Game")
+local Comms = import("Comms")
+local Character = import("Character")
+local Event = import("Event")
+local Serializer = import("Serializer")
+
+local l = Lang.GetResource("module-donatetocranks")
+
+local flavours = {}
+for i = 0,5 do
+	table.insert(flavours, {
+		title     = l["FLAVOUR_" .. i .. "_TITLE"],
+		message   = l["FLAVOUR_" .. i .. "_MESSAGE"],
+	})
+end
 
 local ads = {}
 
+
+local addReputation = function (money)
+	local curRep = Character.persistent.player.reputation
+	local newRep
+
+	if curRep >= 1 then
+		local exp = math.log(money)/math.log(10) - (math.log(curRep)/math.log(2) - 1)
+		newRep = curRep + 2^exp
+	else
+		newRep = curRep + 2^(math.log(money)/math.log(10))
+	end
+	Character.persistent.player.reputation = newRep
+end
+
+
 local onChat = function (form, ref, option)
-	local crank_flavours = Translate:GetFlavours('DonateToCranks')
 	local ad = ads[ref]
 
 	if option == 0 then
@@ -23,7 +52,6 @@ local onChat = function (form, ref, option)
 		form:AddOption("$1000", 1000)
 		form:AddOption("$10000", 10000)
 		form:AddOption("$100000", 100000)
-		form:AddOption(t('HANG_UP'), -1)
 
 		return
 	end
@@ -34,14 +62,15 @@ local onChat = function (form, ref, option)
 	end
 
 	if Game.player:GetMoney() < option then
-		Comms.Message(t("You do not have enough money."))
+		Comms.Message(l.YOU_DO_NOT_HAVE_ENOUGH_MONEY)
 	else
 		if option >= 10000 then
-			Comms.Message(t("Wow! That was very generous."))
+			Comms.Message(l.WOW_THAT_WAS_VERY_GENEROUS)
 		else
-			Comms.Message(t("Thank you. All donations are welcome."))
+			Comms.Message(l.THANK_YOU_ALL_DONATIONS_ARE_WELCOME)
 		end
 		Game.player:AddMoney(-option)
+		addReputation(option)
 	end
 end
 
@@ -50,17 +79,20 @@ local onDelete = function (ref)
 end
 
 local onCreateBB = function (station)
-  local crank_flavours = Translate:GetFlavours('DonateToCranks')
-	local n = Engine.rand:Integer(1, #crank_flavours)
+	local n = Engine.rand:Integer(1, #flavours)
 
 	local ad = {
-		title    = crank_flavours[n].title,
-		message  = crank_flavours[n].message,
+		title    = flavours[n].title,
+		message  = flavours[n].message,
 		station  = station,
 		faceseed = Engine.rand:Integer()
 	}
 
-	local ref = station:AddAdvert(ad.title, onChat, onDelete)
+	local ref = station:AddAdvert({
+		description = ad.title,
+		icon        = "donate_to_cranks",
+		onChat      = onChat,
+		onDelete    = onDelete})
 	ads[ref] = ad
 end
 
@@ -72,7 +104,11 @@ local onGameStart = function ()
 	if not loaded_data then return end
 
 	for k,ad in pairs(loaded_data.ads) do
-		local ref = ad.station:AddAdvert(ad.title, onChat, onDelete)
+		local ref = ad.station:AddAdvert({
+			description = ad.title,
+			icon        = "donate_to_cranks",
+			onChat      = onChat,
+			onDelete    = onDelete})
 		ads[ref] = ad
 	end
 

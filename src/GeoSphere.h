@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _GEOSPHERE_H
@@ -10,6 +10,7 @@
 #include "Random.h"
 #include "Camera.h"
 #include "galaxy/StarSystem.h"
+#include "graphics/RenderState.h"
 #include "graphics/Material.h"
 #include "terrain/Terrain.h"
 #include "GeoPatchID.h"
@@ -35,7 +36,7 @@ public:
 	void Update();
 	void Render(Graphics::Renderer *renderer, const matrix4x4d &modelView, vector3d campos, const float radius, const float scale, const std::vector<Camera::Shadow> &shadows);
 
-	inline double GetHeight(vector3d p) const {
+	inline double GetHeight(const vector3d &p) const {
 		const double h = m_terrain->GetHeight(p);
 		s_vtxGenCount++;
 #ifdef DEBUG
@@ -43,7 +44,7 @@ public:
 		// Fractals absolutely MUST return heights >= 0.0 (one planet radius)
 		// otherwise atmosphere and other things break.
 		if (h < 0.0) {
-			fprintf(stderr, "GetHeight({ %f, %f, %f }) returned %f\n", p.x, p.y, p.z, h);
+			Output("GetHeight({ %f, %f, %f }) returned %f\n", p.x, p.y, p.z, h);
 			m_terrain->DebugDump();
 			assert(h >= 0.0);
 		}
@@ -75,11 +76,11 @@ public:
 
 private:
 	void BuildFirstPatches();
-	ScopedPtr<GeoPatch> m_patches[6];
+	std::unique_ptr<GeoPatch> m_patches[6];
 	const SystemBody *m_sbody;
 
 	// all variables for GetHeight(), GetColor()
-	ScopedPtr<Terrain> m_terrain;
+	RefCountedPtr<Terrain> m_terrain;
 
 	static const uint32_t MAX_SPLIT_OPERATIONS = 128;
 	std::deque<SQuadSplitResult*> mQuadSplitResults;
@@ -100,8 +101,10 @@ private:
 	static RefCountedPtr<GeoPatchContext> s_patchContext;
 
 	void SetUpMaterials();
-	ScopedPtr<Graphics::Material> m_surfaceMaterial;
-	ScopedPtr<Graphics::Material> m_atmosphereMaterial;
+	Graphics::RenderState *m_surfRenderState;
+	Graphics::RenderState *m_atmosRenderState;
+	std::unique_ptr<Graphics::Material> m_surfaceMaterial;
+	std::unique_ptr<Graphics::Material> m_atmosphereMaterial;
 	//special parameters for shaders
 	MaterialParameters m_materialParameters;
 

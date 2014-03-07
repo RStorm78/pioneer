@@ -1,8 +1,9 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "Gui.h"
 #include "vector3.h"		// for projection
+#include "text/TextSupport.h"
 
 namespace Gui {
 
@@ -17,8 +18,8 @@ float Screen::fontScale[2];
 std::list<Widget*> Screen::kbshortcut_widgets;
 Gui::Fixed *Screen::baseContainer;
 Gui::Widget *Screen::focusedWidget;
-GLdouble Screen::modelMatrix[16];
-GLdouble Screen::projMatrix[16];
+matrix4x4f Screen::modelMatrix;
+matrix4x4f Screen::projMatrix;
 GLint Screen::viewport[4];
 
 FontCache Screen::s_fontCache;
@@ -26,6 +27,8 @@ std::stack< RefCountedPtr<Text::TextureFont> > Screen::s_fontStack;
 RefCountedPtr<Text::TextureFont>Screen::s_defaultFont;
 
 Graphics::Renderer *Screen::s_renderer;
+Graphics::RenderState *Screen::alphaBlendState = nullptr;
+Graphics::Material *Screen::flatColorMaterial = nullptr;
 
 void Screen::Init(Graphics::Renderer *renderer, int real_width, int real_height, int ui_width, int ui_height)
 {
@@ -48,12 +51,21 @@ void Screen::Init(Graphics::Renderer *renderer, int real_width, int real_height,
 	Screen::baseContainer = new Gui::Fixed();
 	Screen::baseContainer->SetSize(float(Screen::width), float(Screen::height));
 	Screen::baseContainer->Show();
+
+	Graphics::RenderStateDesc rsd;
+	rsd.blendMode = Graphics::BLEND_ALPHA;
+	rsd.depthWrite = false;
+	alphaBlendState = renderer->CreateRenderState(rsd);
+
+	Graphics::MaterialDescriptor mdesc;
+	flatColorMaterial = renderer->CreateMaterial(mdesc);
 }
 
 void Screen::Uninit()
 {
 	Screen::baseContainer->RemoveAllChildren();		// children deleted elsewhere?
 	delete Screen::baseContainer;
+	delete flatColorMaterial;
 }
 
 static sigc::connection _focusedWidgetOnDelete;
@@ -62,14 +74,11 @@ void Screen::OnDeleteFocusedWidget()
 {
 	_focusedWidgetOnDelete.disconnect();
 	focusedWidget = 0;
-	SDL_EnableKeyRepeat(0, 0); // disable key repeat
 }
 
 void Screen::SetFocused(Widget *w, bool enableKeyRepeat)
 {
 	ClearFocus();
-	if (enableKeyRepeat)
-		SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 	_focusedWidgetOnDelete = w->onDelete.connect(sigc::ptr_fun(&Screen::OnDeleteFocusedWidget));
 	focusedWidget = w;
 }
@@ -79,82 +88,75 @@ void Screen::ClearFocus()
 	if (!focusedWidget) return;
 	_focusedWidgetOnDelete.disconnect();
 	focusedWidget = 0;
-	SDL_EnableKeyRepeat(0, 0); // disable key repeat
-}
-
-void Screen::ShowBadError(const char *msg)
-{
-	// to make things simple for ourselves, we want to hide all the existing widgets
-	// however, if we do it through baseContainer->HideChildren() then we lose track of
-	// which widgets should be shown again when the red-screen is cleared.
-	// So to avoid this problem we don't hide anything, we just temporarily swap to
-	// a different base container which is just used for this red-screen
-
-	Gui::Fixed *oldBaseContainer = Screen::baseContainer;
-	Screen::baseContainer = new Gui::Fixed();
-	Screen::baseContainer->SetSize(float(Screen::width), float(Screen::height));
-	Screen::baseContainer->Show();
-
-	Gui::Fixed *f = new Gui::Fixed(6*GetWidth()/8.0f, 6*GetHeight()/8.0f);
-	Gui::Screen::AddBaseWidget(f, GetWidth()/8, GetHeight()/8);
-	f->SetTransparency(false);
-	f->SetBgColor(0.4f,0,0,1.0f);
-	f->Add(new Gui::Label(msg, TextLayout::ColourMarkupNone), 10, 10);
-
-	Gui::Button *okButton = new Gui::LabelButton(new Gui::Label("Ok"));
-	okButton->SetShortcut(SDLK_RETURN, KMOD_NONE);
-	f->Add(okButton, 10.0f, 6*GetHeight()/8.0f - 32);
-	f->ShowAll();
-	f->Show();
-
-	do {
-		Gui::MainLoopIteration();
-		SDL_Delay(10);
-	} while (!okButton->IsPressed());
-
-	delete f; // Gui::Fixed does a horrible thing and calls Gui::Screen::RemoveBaseWidget(this) in its destructor
-	delete Screen::baseContainer;
-	Screen::baseContainer = oldBaseContainer;
 }
 
 bool Screen::Project(const vector3d &in, vector3d &out)
 {
-	GLint o = gluProject(in.x, in.y, in.z, modelMatrix, projMatrix, viewport, &out.x, &out.y, &out.z);
+	PROFILE_SCOPED()
+	// implements gluProject (see the OpenGL documentation or the Mesa implementation of gluProject)
+	const float * const M = modelMatrix.Data();
+	const float * const P = projMatrix.Data();
+
+	const double vcam[4] = { // camera space
+		in.x*M[0] + in.y*M[4] + in.z*M[ 8] + M[12],
+		in.x*M[1] + in.y*M[5] + in.z*M[ 9] + M[13],
+		in.x*M[2] + in.y*M[6] + in.z*M[10] + M[14],
+		in.x*M[3] + in.y*M[7] + in.z*M[11] + M[15]
+	};
+	const double vclip[4] = { // clip space
+		vcam[0]*P[0] + vcam[1]*P[4] + vcam[2]*P[ 8] + vcam[3]*P[12],
+		vcam[0]*P[1] + vcam[1]*P[5] + vcam[2]*P[ 9] + vcam[3]*P[13],
+		vcam[0]*P[2] + vcam[1]*P[6] + vcam[2]*P[10] + vcam[3]*P[14],
+		vcam[0]*P[3] + vcam[1]*P[7] + vcam[2]*P[11] + vcam[3]*P[15]
+	};
+
+	if (is_zero_exact(vclip[3])) { return false; }
+
+	const double w = vclip[3];
+
+	const double v[3] = {
+		(vclip[0] / w) * 0.5 + 0.5,
+		(vclip[1] / w) * 0.5 + 0.5,
+		(vclip[2] / w) * 0.5 + 0.5
+	};
+
+	out.x = v[0] * viewport[2] + viewport[0];
+	out.y = v[1] * viewport[3] + viewport[1];
+	out.z = v[2];
+
+	// map to pixels
 	out.x = out.x * width * invRealWidth;
 	out.y = GetHeight() - out.y * height * invRealHeight;
-	return (o == GL_TRUE);
+	return true;
 }
 
 void Screen::EnterOrtho()
 {
-	glGetDoublev (GL_MODELVIEW_MATRIX, modelMatrix);
-	glGetDoublev (GL_PROJECTION_MATRIX, projMatrix);
-	glGetIntegerv (GL_VIEWPORT, viewport);
+	PROFILE_SCOPED()
 
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_LIGHTING);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(0, width, height, 0, -1, 1);
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
+	Graphics::Renderer *r = GetRenderer();
+
+	modelMatrix = r->GetCurrentModelView();
+	projMatrix = r->GetCurrentProjection();
+
+	r->GetCurrentViewport(&viewport[0]);
+	r->SetOrthographicProjection(0, width, height, 0, -1, 1);
+	r->SetTransform(matrix4x4f::Identity());
 }
 
 void Screen::LeaveOrtho()
 {
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-	glEnable(GL_LIGHTING);
-	glEnable(GL_DEPTH_TEST);
+	PROFILE_SCOPED()
+
+	Graphics::Renderer *r = GetRenderer();
+
+	r->SetProjection(projMatrix);
+	r->SetTransform(modelMatrix);
 }
 
 void Screen::Draw()
 {
+	PROFILE_SCOPED()
 	assert(Screen::initted);
 	EnterOrtho();
 	baseContainer->Draw();
@@ -163,6 +165,7 @@ void Screen::Draw()
 
 bool Screen::IsBaseWidget(const Widget *w)
 {
+	PROFILE_SCOPED()
 	return w == static_cast<const Widget*>(baseContainer);
 }
 
@@ -213,10 +216,10 @@ void Screen::OnClick(SDL_MouseButtonEvent *e)
 	}
 }
 
-void Screen::OnKeyDown(const SDL_keysym *sym)
+void Screen::OnKeyDown(const SDL_Keysym *sym)
 {
 	if (focusedWidget) {
-		bool accepted = focusedWidget->OnKeyPress(sym);
+		bool accepted = focusedWidget->OnKeyDown(sym);
 		// don't check shortcuts if the focused widget accepted the key-press
 		if (accepted)
 			return;
@@ -228,8 +231,16 @@ void Screen::OnKeyDown(const SDL_keysym *sym)
 	}
 }
 
-void Screen::OnKeyUp(const SDL_keysym *sym)
+void Screen::OnKeyUp(const SDL_Keysym *sym)
 {
+}
+
+void Screen::OnTextInput(const SDL_TextInputEvent *e)
+{
+	if (!focusedWidget) return;
+	Uint32 unicode;
+	Text::utf8_decode_char(&unicode, e->text);
+	focusedWidget->OnTextInput(unicode);
 }
 
 float Screen::GetFontHeight(Text::TextureFont *font)
@@ -281,36 +292,42 @@ int Screen::PickCharacterInString(const std::string &s, float x, float y, Text::
 
 void Screen::RenderString(const std::string &s, float xoff, float yoff, const Color &color, Text::TextureFont *font)
 {
+	PROFILE_SCOPED()
     if (!font) font = GetFont().Get();
 
-	GLdouble modelMatrix_[16];
-	glPushMatrix();
-	glGetDoublev (GL_MODELVIEW_MATRIX, modelMatrix_);
-	float x = modelMatrix_[12] + xoff;
-	float y = modelMatrix_[13] + yoff;
-	glLoadIdentity();
-	glTranslatef(floor(x/Screen::fontScale[0])*Screen::fontScale[0],
-			floor(y/Screen::fontScale[1])*Screen::fontScale[1], 0);
-	glScalef(Screen::fontScale[0], Screen::fontScale[1], 1);
+	Graphics::Renderer *r = Gui::Screen::GetRenderer();
+
+	const matrix4x4f &modelMatrix_ = r->GetCurrentModelView();
+	Graphics::Renderer::MatrixTicket ticket(r, Graphics::MatrixMode::MODELVIEW);
+
+	const float x = modelMatrix_[12] + xoff;
+	const float y = modelMatrix_[13] + yoff;
+
+	r->LoadIdentity();
+	r->Translate(floor(x/Screen::fontScale[0])*Screen::fontScale[0], floor(y/Screen::fontScale[1])*Screen::fontScale[1], 0);
+	r->Scale(Screen::fontScale[0], Screen::fontScale[1], 1);
+
 	font->RenderString(s.c_str(), 0, 0, color);
-	glPopMatrix();
 }
 
 void Screen::RenderMarkup(const std::string &s, const Color &color, Text::TextureFont *font)
 {
+	PROFILE_SCOPED()
     if (!font) font = GetFont().Get();
 
-	GLdouble modelMatrix_[16];
-	glPushMatrix();
-	glGetDoublev (GL_MODELVIEW_MATRIX, modelMatrix_);
-	float x = modelMatrix_[12];
-	float y = modelMatrix_[13];
-	glLoadIdentity();
-	glTranslatef(floor(x/Screen::fontScale[0])*Screen::fontScale[0],
-			floor(y/Screen::fontScale[1])*Screen::fontScale[1], 0);
-	glScalef(Screen::fontScale[0], Screen::fontScale[1], 1);
+	Graphics::Renderer *r = Gui::Screen::GetRenderer();
+
+	const matrix4x4f &modelMatrix_ = r->GetCurrentModelView();
+	Graphics::Renderer::MatrixTicket ticket(r, Graphics::MatrixMode::MODELVIEW);
+
+	const float x = modelMatrix_[12];
+	const float y = modelMatrix_[13];
+
+	r->LoadIdentity();
+	r->Translate(floor(x/Screen::fontScale[0])*Screen::fontScale[0], floor(y/Screen::fontScale[1])*Screen::fontScale[1], 0);
+	r->Scale(Screen::fontScale[0], Screen::fontScale[1], 1);
+
 	font->RenderMarkup(s.c_str(), 0, 0, color);
-	glPopMatrix();
 }
 
 void Screen::AddShortcutWidget(Widget *w)

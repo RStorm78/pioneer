@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #ifndef _SECTORVIEW_H
@@ -6,7 +6,7 @@
 
 #include "libs.h"
 #include "gui/Gui.h"
-#include "View.h"
+#include "UIView.h"
 #include <vector>
 #include <set>
 #include <string>
@@ -14,8 +14,10 @@
 #include "galaxy/Sector.h"
 #include "galaxy/SystemPath.h"
 #include "graphics/Drawables.h"
+#include "graphics/RenderState.h"
+#include <set>
 
-class SectorView: public View {
+class SectorView: public UIView {
 public:
 	SectorView();
 	SectorView(Serializer::Reader &rd);
@@ -25,7 +27,8 @@ public:
 	virtual void ShowAll();
 	virtual void Draw3D();
 	vector3f GetPosition() const { return m_pos; }
-	SystemPath GetSelectedSystem() const { return m_selected; }
+	SystemPath GetSelected() const { return m_selected; }
+	void SetSelected(const SystemPath &path);
 	SystemPath GetHyperspaceTarget() const { return m_hyperspaceTarget; }
 	void SetHyperspaceTarget(const SystemPath &path);
 	void FloatHyperspaceTarget();
@@ -41,41 +44,51 @@ public:
 
 protected:
 	virtual void OnSwitchTo();
+
 private:
 	void InitDefaults();
 	void InitObject();
 
+	struct DistanceIndicator {
+		Gui::Label *label;
+		Graphics::Drawables::Line3D *line;
+		Color okayColor;
+		Color unsuffFuelColor;
+		Color outOfRangeColor;
+	};
+
 	struct SystemLabels {
 		Gui::Label *systemName;
-		Gui::Label *distance;
+		Gui::Label *sector;
+		DistanceIndicator distance;
 		Gui::Label *starType;
 		Gui::Label *shortDesc;
 	};
 
-	void DrawNearSectors(matrix4x4f modelview);
-	void DrawNearSector(int x, int y, int z, const vector3f &playerAbsPos, const matrix4x4f &trans);
-	void PutSystemLabels(Sector *sec, const vector3f &origin, int drawRadius);
+	void DrawNearSectors(const matrix4x4f& modelview);
+	void DrawNearSector(const int sx, const int sy, const int sz, const vector3f &playerAbsPos, const matrix4x4f &trans);
+	void PutSystemLabels(RefCountedPtr<Sector> sec, const vector3f &origin, int drawRadius);
 
-	void DrawFarSectors(matrix4x4f modelview);
-	void BuildFarSector(Sector *sec, const vector3f &origin, std::vector<vector3f> &points, std::vector<Color> &colors);
+	void DrawFarSectors(const matrix4x4f& modelview);
+	void BuildFarSector(RefCountedPtr<Sector> sec, const vector3f &origin, std::vector<vector3f> &points, std::vector<Color> &colors);
 	void PutFactionLabels(const vector3f &secPos);
+	void AddStarBillboard(const matrix4x4f &modelview, const vector3f &pos, const Color &col, float size);
 
-	void SetSelectedSystem(const SystemPath &path);
 	void OnClickSystem(const SystemPath &path);
 
+	void UpdateDistanceLabelAndLine(DistanceIndicator &distance, const SystemPath &src, const SystemPath &dest);
 	void UpdateSystemLabels(SystemLabels &labels, const SystemPath &path);
 	void UpdateFactionToggles();
 	void RefreshDetailBoxVisibility();
 
 	void UpdateHyperspaceLockLabel();
 
-	Sector* GetCached(const SystemPath& loc);
-	Sector* GetCached(const int sectorX, const int sectorY, const int sectorZ);
+	RefCountedPtr<Sector> GetCached(const SystemPath& loc) { return m_sectorCache->GetCached(loc); }
 	void ShrinkCache();
 
-	void MouseButtonDown(int button, int x, int y);
-	void OnKeyPressed(SDL_keysym *keysym);
-	void OnSearchBoxKeyPress(const SDL_keysym *keysym);
+	void MouseWheel(bool up);
+	void OnKeyPressed(SDL_Keysym *keysym);
+	void OnSearchBoxKeyPress(const SDL_Keysym *keysym);
 
 	bool m_inSystem;
 
@@ -107,9 +120,10 @@ private:
 	Gui::ImageButton *m_galaxyButton;
 	Gui::TextEntry *m_searchBox;
 	Gui::ToggleButton *m_drawOutRangeLabelButton;
+	Gui::ToggleButton *m_drawUninhabitedLabelButton;
 	Gui::ToggleButton *m_drawSystemLegButton;
 
-	ScopedPtr<Graphics::Drawables::Disk> m_disk;
+	std::unique_ptr<Graphics::Drawables::Disk> m_disk;
 
 	Gui::LabelSet *m_clickableLabels;
 
@@ -118,6 +132,7 @@ private:
 	SystemLabels m_currentSystemLabels;
 	SystemLabels m_selectedSystemLabels;
 	SystemLabels m_targetSystemLabels;
+	DistanceIndicator m_secondDistance;
 	Gui::Label *m_hyperspaceLockLabel;
 
 	Gui::VBox *m_factionBox;
@@ -131,16 +146,22 @@ private:
 
 	void OnToggleFaction(Gui::ToggleButton* button, bool pressed, Faction* faction);
 
-	sigc::connection m_onMouseButtonDown;
+	sigc::connection m_onMouseWheelCon;
 	sigc::connection m_onKeyPressConnection;
 
-	std::map<SystemPath,Sector*> m_sectorCache;
+	RefCountedPtr<SectorCache::Slave> m_sectorCache;
 	std::string m_previousSearch;
 
 	float m_playerHyperspaceRange;
+	Graphics::Drawables::Line3D m_selectedLine;
+	Graphics::Drawables::Line3D m_secondLine;
 	Graphics::Drawables::Line3D m_jumpLine;
 
-	RefCountedPtr<Graphics::Material> m_material;
+	Graphics::RenderState *m_solidState;
+	Graphics::RenderState *m_alphaBlendState;
+	Graphics::RenderState *m_jumpSphereState;
+	RefCountedPtr<Graphics::Material> m_material; //flat colour
+	RefCountedPtr<Graphics::Material> m_starMaterial;
 
 	std::vector<vector3f> m_farstars;
 	std::vector<Color>    m_farstarsColor;
@@ -156,7 +177,11 @@ private:
 	int m_cacheZMin;
 	int m_cacheZMax;
 
-	ScopedPtr<Graphics::VertexArray> m_lineVerts;
+	std::unique_ptr<Graphics::VertexArray> m_lineVerts;
+	std::unique_ptr<Graphics::VertexArray> m_secLineVerts;
+	std::unique_ptr<Graphics::Drawables::Sphere3D> m_jumpSphere;
+	std::unique_ptr<Graphics::Drawables::Disk> m_jumpDisk;
+	std::unique_ptr<Graphics::VertexArray> m_starVerts;
 };
 
 #endif /* _SECTORVIEW_H */

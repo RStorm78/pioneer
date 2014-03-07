@@ -1,15 +1,31 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "JobQueue.h"
+#include "StringF.h"
+
+void Job::UnlinkHandle()
+{
+	if (m_handle)
+		m_handle->Unlink();
+}
+
+//virtual
+Job::~Job()
+{
+	UnlinkHandle();
+}
 
 JobRunner::JobRunner(JobQueue *jq, const uint8_t idx) :
 	m_jobQueue(jq),
 	m_job(0),
-	m_threadIdx(idx)
+	m_threadIdx(idx),
+	m_queueDestroyed(false)
 {
+	m_threadName = stringf("Thread %0{d}", m_threadIdx);
 	m_jobLock = SDL_CreateMutex();
-	m_threadId = SDL_CreateThread(&JobRunner::Trampoline, this);
+	m_queueDestroyingLock = SDL_CreateMutex();
+	m_threadId = SDL_CreateThread(&JobRunner::Trampoline, m_threadName.c_str(), this);
 }
 
 JobRunner::~JobRunner()
@@ -17,8 +33,10 @@ JobRunner::~JobRunner()
 	// if we have a job running, cancel it. the worker will return it to the
 	// finish queue, where it will be deleted later, so we don't need to do that
 	SDL_LockMutex(m_jobLock);
-	if (m_job)
+	if (m_job) {
+		m_job->UnlinkHandle();
 		m_job->OnCancel();
+	}
 	SDL_UnlockMutex(m_jobLock);
 
 	// XXX - AndyC(FluffyFreak) - I'd like to find a better answer for this but I can't see what purpose it serves.
@@ -37,7 +55,17 @@ int JobRunner::Trampoline(void *data)
 
 void JobRunner::Main()
 {
-	Job *job = m_jobQueue->GetJob();
+	Job *job;
+
+	// Lock to prevent destruction of the queue while calling GetJob.
+	SDL_LockMutex(m_queueDestroyingLock);
+	if (m_queueDestroyed) {
+		SDL_UnlockMutex(m_queueDestroyingLock);
+		return;
+	}
+	job = m_jobQueue->GetJob();
+	SDL_UnlockMutex(m_queueDestroyingLock);
+
 	while (job) {
 		// record the job so we can cancel it in case of premature shutdown
 		SDL_LockMutex(m_jobLock);
@@ -46,15 +74,100 @@ void JobRunner::Main()
 
 		// run the thing
 		job->OnRun();
+
+		// Lock to prevent destruction of the queue while calling Finish
+		SDL_LockMutex(m_queueDestroyingLock);
+		if (m_queueDestroyed) {
+			SDL_UnlockMutex(m_queueDestroyingLock);
+			return;
+		}
 		m_jobQueue->Finish(job, m_threadIdx);
+		SDL_UnlockMutex(m_queueDestroyingLock);
 
 		SDL_LockMutex(m_jobLock);
 		m_job = 0;
 		SDL_UnlockMutex(m_jobLock);
 
 		// get a new job. this will block normally, or return null during
-		// shutdown
+		// shutdown (Lock to protect against the queue being destroyed
+		// during GetJob)
+		SDL_LockMutex(m_queueDestroyingLock);
+		if (m_queueDestroyed) {
+			SDL_UnlockMutex(m_queueDestroyingLock);
+			return;
+		}
 		job = m_jobQueue->GetJob();
+		SDL_UnlockMutex(m_queueDestroyingLock);
+	}
+}
+
+SDL_mutex *JobRunner::GetQueueDestroyingLock()
+{
+	return m_queueDestroyingLock;
+}
+
+void JobRunner::SetQueueDestroyed()
+{
+	m_queueDestroyed = true;
+}
+
+
+JobHandle::JobHandle(Job* job, JobQueue* queue, JobClient* client) : m_job(job), m_queue(queue), m_client(client)
+{
+	assert(!m_job->GetHandle());
+	m_job->SetHandle(this);
+}
+
+void JobHandle::Unlink()
+{
+	if (m_job) {
+		assert(m_job->GetHandle() == this);
+		m_job->ClearHandle();
+	}
+	JobClient* client = m_client; // This JobHandle may be deleted by the client, so clear it before
+	m_job = nullptr;
+	m_queue = nullptr;
+	m_client = nullptr;
+	if (client)
+		client->RemoveJob(this); // This might delete this JobHandle, so the object must be cleared before
+}
+
+JobHandle::JobHandle(JobHandle&& other) : m_job(other.m_job), m_queue(other.m_queue), m_client(other.m_client)
+{
+	if (m_job) {
+		assert(m_job->GetHandle() == &other);
+		m_job->SetHandle(this);
+	}
+	other.m_job = nullptr;
+	other.m_queue = nullptr;
+	other.m_client = nullptr;
+}
+
+JobHandle& JobHandle::operator=(JobHandle&& other)
+{
+	if (m_job && m_queue)
+		m_queue->Cancel(m_job);
+	m_job = other.m_job;
+	m_queue = other.m_queue;
+	m_client = other.m_client;
+	if (m_job) {
+		assert(m_job->GetHandle() == &other);
+		m_job->SetHandle(this);
+	}
+	other.m_job = nullptr;
+	other.m_queue = nullptr;
+	other.m_client = nullptr;
+	return *this;
+}
+
+JobHandle::~JobHandle()
+{
+	if (m_job && m_queue) {
+		m_client = nullptr; // Must not tell client to remove the handle, if it's just being destroyed obviously
+		m_queue->Cancel(m_job);
+	} else {
+		m_client = nullptr; // Must not tell client to remove the handle, if it's just being destroyed obviously
+		Unlink();
 	}
 }
 
@@ -85,6 +198,16 @@ JobQueue::~JobQueue()
 	// a new job right now
 	SDL_CondBroadcast(m_queueWaitCond);
 
+	// Flag each job runner that we're being destroyed (with lock so no one
+	// else is running one of our functions). Both the flag and the mutex
+	// must be owned by the runner, because we may not exist when it's
+	// checked.
+	for (std::vector<JobRunner*>::iterator i = m_runners.begin(); i != m_runners.end(); ++i) {
+		SDL_LockMutex((*i)->GetQueueDestroyingLock());
+		(*i)->SetQueueDestroyed();
+		SDL_UnlockMutex((*i)->GetQueueDestroyingLock());
+	}
+
 	const uint32_t numThreads = m_runners.size();
 	// delete the runners. this will tear down their underlying threads
 	for (std::vector<JobRunner*>::iterator i = m_runners.begin(); i != m_runners.end(); ++i)
@@ -107,8 +230,10 @@ JobQueue::~JobQueue()
 	SDL_DestroyMutex(m_queueLock);
 }
 
-void JobQueue::Queue(Job *job)
+JobHandle JobQueue::Queue(Job *job, JobClient *client)
 {
+	JobHandle handle(job, this, client);
+
 	// push the job onto the queue
 	SDL_LockMutex(m_queueLock);
 	m_queue.push_back(job);
@@ -116,6 +241,7 @@ void JobQueue::Queue(Job *job)
 
 	// and tell a waiting runner that there's one available
 	SDL_CondSignal(m_queueWaitCond);
+	return handle;
 }
 
 // called by the runner to get a new job
@@ -160,6 +286,7 @@ void JobQueue::Finish(Job *job, const uint8_t threadIdx)
 // call OnFinish methods for completed jobs, and clean up
 Uint32 JobQueue::FinishJobs()
 {
+	PROFILE_SCOPED()
 	Uint32 finished = 0;
 
 	const uint32_t numRunners = m_runners.size();
@@ -173,8 +300,11 @@ Uint32 JobQueue::FinishJobs()
 		m_finished[i].pop_front();
 		SDL_UnlockMutex(m_finishedLock[i]);
 
+		assert(job);
+
 		// if its already been cancelled then its taken care of, so we just forget about it
-		if (!job->cancelled) {
+		if(!job->cancelled) {
+			job->UnlinkHandle();
 			job->OnFinish();
 			finished++;
 		}
@@ -216,6 +346,7 @@ void JobQueue::Cancel(Job *job) {
 
 	// its running, so we have to tell it to cancel
 	job->cancelled = true;
+	job->UnlinkHandle();
 	job->OnCancel();
 
 unlock:

@@ -1,4 +1,4 @@
-// Copyright © 2008-2013 Pioneer Developers. See AUTHORS.txt for details
+// Copyright © 2008-2014 Pioneer Developers. See AUTHORS.txt for details
 // Licensed under the terms of the GPL v3. See licenses/GPL-3.txt
 
 #include "libs.h"
@@ -37,15 +37,10 @@ void TextEntry::SetText(const std::string &text)
 	ResizeRequest();
 }
 
-bool TextEntry::OnKeyPress(const SDL_keysym *sym)
+bool TextEntry::OnKeyDown(const SDL_Keysym *sym)
 {
-	bool accepted = onFilterKeys.empty() ? true : onFilterKeys.emit(sym);
-	if (! accepted)
-		return false;
-	accepted = false;
-
+	bool accepted = false;
 	bool changed = false;
-	Uint16 unicode = sym->unicode;
 
 	int oldNewlineCount = m_newlineCount;
 
@@ -115,30 +110,22 @@ bool TextEntry::OnKeyPress(const SDL_keysym *sym)
 		m_cursPos = int(pos);
 		accepted = true;
 	}
-
-	if ((unicode == '\n') || (unicode == '\r')) {
+	if (sym->sym == SDLK_RETURN) {
 		switch (m_newlineMode) {
-		case IgnoreNewline:
-			unicode = '\0';
-			break;
-		case AcceptNewline:
-			unicode = '\n';
-			break;
-		case AcceptCtrlNewline:
-			unicode = (sym->mod & KMOD_CTRL) ? '\n' : '\0';
-			break;
+			case IgnoreNewline:
+				accepted = false;
+				break;
+			case AcceptNewline:
+				accepted = true;
+				break;
+			case AcceptCtrlNewline:
+				accepted = sym->mod & KMOD_CTRL;
+				break;
 		}
-	}
-
-	if (isgraph(unicode) || (unicode == ' ') || (unicode == '\n')) {
-		if (unicode == '\n')
+		if (accepted) {
 			++m_newlineCount;
-		char buf[4];
-		int len = Text::utf8_encode_char(unicode, buf);
-		m_text.insert(m_cursPos, buf, len);
-		SetCursorPos(m_cursPos+len);
-		changed = true;
-		accepted = true;
+			OnTextInput('\n');
+		}
 	}
 
 	if (oldNewlineCount != m_newlineCount)
@@ -148,6 +135,21 @@ bool TextEntry::OnKeyPress(const SDL_keysym *sym)
 	if (changed) onValueChanged.emit();
 
 	return accepted;
+}
+
+void TextEntry::OnTextInput(Uint32 unicode)
+{
+	bool changed = false;
+
+	if (isgraph(unicode) || (unicode == ' ') || (unicode == '\n')) {
+		char buf[4];
+		int len = Text::utf8_encode_char(unicode, buf);
+		m_text.insert(m_cursPos, buf, len);
+		SetCursorPos(m_cursPos+len);
+		changed = true;
+	}
+
+	if (changed) onValueChanged.emit();
 }
 
 void TextEntry::GetSizeRequested(float size[2])
@@ -179,6 +181,15 @@ void TextEntry::OnRawMouseDown(MouseButtonEvent *e)
 void TextEntry::GrabFocus()
 {
 	Screen::SetFocused(this, true);
+	// XXX should this be here? or somewhere else?
+	// In some places (at least the Lua console and the sector view search box),
+	// a keyboard shortcut is used to switch to the text entry widget.
+	// Pressing '`' opens the console, pressing '/' in the sector view selects the search box.
+	// Those are normal text keys, so SDL generates an SDL_TEXTINPUT event for them.
+	// But we don't want to capture that text, because it's not really text input
+	// (it happens "before" the text entry widget gets focus)
+	// So we flush those events from the queue here.
+	SDL_FlushEvents(SDL_TEXTEDITING, SDL_TEXTINPUT);
 }
 
 void TextEntry::Unfocus()
@@ -192,6 +203,7 @@ void TextEntry::Unfocus()
 
 void TextEntry::Draw()
 {
+	PROFILE_SCOPED()
 	m_justFocused = false;
 
 	float size[2];
@@ -208,37 +220,30 @@ void TextEntry::Draw()
 		if (m_scroll < 0) m_scroll = 0;
 	}
 
-	glColor3f(0,0,0);
-	glBegin(GL_TRIANGLE_FAN);
-		glVertex2f(0,size[1]);
-		glVertex2f(size[0],size[1]);
-		glVertex2f(size[0],0);
-		glVertex2f(0,0);
-	glEnd();
+	//background
+	Theme::DrawRect(vector2f(0.f), vector2f(size[0], size[1]), Color(0,0,0,192), Screen::alphaBlendState);
 
-	Color c = IsFocused() ? Color::WHITE : Color(0.75f,0.75f,0.75f,1.0f);
+	//outline
+	const Color c = IsFocused() ? Color::WHITE : Color(192, 192, 192, 255);
+	const vector3f boxVts[] = {
+		vector3f(0.f, 0.f, 0.f),
+		vector3f(size[0],0.f, 0.f),
+		vector3f(size[0],size[1], 0.f),
+		vector3f(0,size[1], 0.f)
+	};
+	Screen::GetRenderer()->DrawLines(4, &boxVts[0], c, Screen::alphaBlendState, Graphics::LINE_LOOP);
 
-	glColor4fv(c);
-	glBegin(GL_LINE_LOOP);
-		glVertex2f(0,0);
-		glVertex2f(size[0],0);
-		glVertex2f(size[0],size[1]);
-		glVertex2f(0,size[1]);
-	glEnd();
-
-
+	//text
 	SetScissor(true);
-
 	Gui::Screen::RenderString(m_text, 1.0f - m_scroll, 0.0f, c, m_font.Get());
-
-	/* Cursor */
-	glColor3f(0.5f,0.5f,0.5f);
-	glBegin(GL_LINES);
-		glVertex2f(curs_x + 1.0f - m_scroll, curs_y + Gui::Screen::GetFontDescender(m_font.Get()) - Gui::Screen::GetFontHeight(m_font.Get()));
-		glVertex2f(curs_x + 1.0f - m_scroll, curs_y + Gui::Screen::GetFontDescender(m_font.Get()));
-	glEnd();
-
 	SetScissor(false);
+
+	//cursor
+	const vector3f cursorVts[] = {
+		vector3f(curs_x + 1.0f - m_scroll, curs_y + Gui::Screen::GetFontDescender(m_font.Get()) - Gui::Screen::GetFontHeight(m_font.Get()), 0.f),
+		vector3f(curs_x + 1.0f - m_scroll, curs_y + Gui::Screen::GetFontDescender(m_font.Get()), 0.f),
+	};
+	Screen::GetRenderer()->DrawLines(2, &cursorVts[0], Color(128), Screen::alphaBlendState);
 }
 
 } /* namespace Gui */
