@@ -1,0 +1,2 @@
+E:\GitHub_Project\pioneer\win32\codeblocks>premake4.exe --thirdparty=E:\Logiciel
+\CodeBlocks\MinGW\mingw32 codeblocks

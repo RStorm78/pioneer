@@ -526,11 +526,8 @@ void WorldView::RefreshButtonStateAndVisibility()
 				case CONTROL_FIXSPEED: {
 					std::string msg;
 					const double setspeed = Pi::player->GetPlayerController()->GetSetSpeed();
-					if (setspeed > 1000) {
-						msg = stringf(Lang::SET_SPEED_KM_S, formatarg("speed", setspeed*0.001));
-					} else {
-						msg = stringf(Lang::SET_SPEED_M_S, formatarg("speed", setspeed));
-					}
+					//XXXmsg = stringf(Lang::SET_SPEED_ALL, formatarg("speed", format_speed(setspeed)));
+					//"Set speed: %speed"
 					m_flightStatus->SetText(msg);
 					break;
 				}
@@ -640,18 +637,15 @@ void WorldView::RefreshButtonStateAndVisibility()
 				rel_to = Pi::player->GetFrame()->GetLabel().c_str();
 				_vel = vel.Length();
 			}
-			if (_vel > 1000) {
-				str = stringf(Lang::KM_S_RELATIVE_TO, formatarg("speed", _vel*0.001), formatarg("frame", rel_to));
-			} else {
-				str = stringf(Lang::M_S_RELATIVE_TO, formatarg("speed", _vel), formatarg("frame", rel_to));
-			}
+			//XXXstr = stringf(Lang::ALL_RELATIVE_TO, formatarg("speed", format_speed(_vel)), formatarg("frame", rel_to));
+
 			Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_TOP_LEFT, str);
 		}
 
 		if (Body *navtarget = Pi::player->GetNavTarget()) {
 			double dist = Pi::player->GetPositionRelTo(navtarget).Length();
-			Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_TOP_RIGHT, stringf(Lang::N_DISTANCE_TO_TARGET,
-				formatarg("distance", format_distance(dist))));
+			//XXXPi::cpan->SetOverlayText(ShipCpanel::OVERLAY_TOP_RIGHT, stringf(Lang::N_DISTANCE_TO_TARGET,
+			//XXX	formatarg("distance", format_distance(dist))));
 		}
 		else
 			Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_TOP_RIGHT, "");
@@ -681,12 +675,9 @@ void WorldView::RefreshButtonStateAndVisibility()
 					double vspeed = velocity.Dot(surface_pos);
 					if (fabs(vspeed) < 0.05) vspeed = 0.0; // Avoid alternating between positive/negative zero
 					if (altitude < 0) altitude = 0;
-					if (altitude >= 100000.0)
-						Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, stringf(Lang::ALT_IN_KM, formatarg("altitude", altitude / 1000.0),
-							formatarg("vspeed", vspeed / 1000.0)));
-					else
-						Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, stringf(Lang::ALT_IN_METRES, formatarg("altitude", altitude),
-							formatarg("vspeed", vspeed)));
+					//XXXPi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, stringf(Lang::ALT_IN_ALL, formatarg("altitude", format_distance(altitude)),
+					//XXXformatarg("vspeed", format_speed(vspeed))));
+					
 				} else {
 					Pi::cpan->SetOverlayText(ShipCpanel::OVERLAY_BOTTOM_RIGHT, "");
 				}
@@ -1369,7 +1360,7 @@ void WorldView::UpdateProjectedObjects()
 		// navtarget distance/target square indicator (displayed with navtarget label)
 		double dist = (navtarget->GetTargetIndicatorPosition(cam_frame)
 			- Pi::player->GetPositionRelTo(cam_frame)).Length();
-		m_navTargetIndicator.label->SetText(format_distance(dist).c_str());
+		//XXXm_navTargetIndicator.label->SetText(format_distance(dist).c_str());
 		UpdateIndicator(m_navTargetIndicator, navtarget->GetTargetIndicatorPosition(cam_frame));
 
 		// velocity relative to navigation target
@@ -1379,10 +1370,8 @@ void WorldView::UpdateProjectedObjects()
 
 		if (navspeed >= 0.01) { // 1 cm per second
 			char buf[128];
-			if (navspeed > 1000)
-				snprintf(buf, sizeof(buf), "%.2f km/s", navspeed*0.001);
-			else
-				snprintf(buf, sizeof(buf), "%.0f m/s", navspeed);
+			//XXXsnprintf(buf, sizeof(buf), "%s", format_speed(navspeed).c_str());
+
 			m_navVelIndicator.label->SetText(buf);
 			UpdateIndicator(m_navVelIndicator, camSpaceNavVel);
 
@@ -1447,7 +1436,7 @@ void WorldView::UpdateProjectedObjects()
 			m_combatTargetIndicator.label->Color(r*255, 0, b*255);
 			m_targetLeadIndicator.label->Color(r*255, 0, b*255);
 
-			snprintf(buf, sizeof(buf), "%0.fm/s", vel);
+			//XXXsnprintf(buf, sizeof(buf), "%s", format_speed(vel).c_str());
 			m_targetLeadIndicator.label->SetText(buf);
 			UpdateIndicator(m_targetLeadIndicator, leadpos);
 

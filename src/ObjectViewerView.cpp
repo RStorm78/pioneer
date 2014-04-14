@@ -152,7 +152,7 @@ void ObjectViewerView::Update()
 			m_sbodyRadius->SetText(stringf("%0{f}", sbody->GetRadiusAsFixed().ToFloat()));
 		}
 	}
-	snprintf(buf, sizeof(buf), "View dist: %s     Object: %s", format_distance(viewingDist).c_str(), (body ? body->GetLabel().c_str() : "<none>"));
+	//XXXsnprintf(buf, sizeof(buf), "View dist: %s     Object: %s", format_distance(viewingDist).c_str(), (body ? body->GetLabel().c_str() : "<none>"));
 	m_infoLabel->SetText(buf);
 
 	if (body && body->IsType(Object::TERRAINBODY)) m_vbox->ShowAll();

@@ -64,6 +64,48 @@ float discCovered(const in float dist, const in float rad) {
 }
 #endif // ECLIPSE
 
+//	for (int i=0; i<NUM_LIGHTS; ++i) {
+void calcLight(const in int i, const in gl_LightSourceParameters lightSource, const in vec3 v, inout float nDotVP, inout float nnDotVP, const in vec3 tnorm, inout vec4 diff, const in vec3 eyepos, inout float specularReflection, const in float invNumLights )
+{
+
+		vec3 lightDir = normalize(vec3(lightSource.position));
+		float unshadowed = 1.0;
+#ifdef ECLIPSE
+		for (int j=0; j<shadows; j++) {
+			if (i == occultedLight[j]) //modif qui corrige la disparition de l'eclipse.
+			{	
+				vec3 centre = vec3( shadowCentreX[j], shadowCentreY[j], shadowCentreZ[j] );
+				
+				// Apply eclipse:
+				vec3 projectedPoint = v - dot(lightDir,v)*lightDir;
+				// By our assumptions, the proportion of light blocked at this point by
+				// this sphere is the proportion of the disc of radius lrad around
+				// projectedPoint covered by the disc of radius srad around shadowCentre.
+				float dist = length(projectedPoint - centre);
+				unshadowed *= 1.0 - discCovered(dist/lrad[j], sdivlrad[j]); //modif
+			}
+		}
+#endif // ECLIPSE
+		unshadowed = clamp(unshadowed, 0.0, 1.0);
+		nDotVP  = max(0.0, dot(tnorm, normalize(vec3(lightSource.position))));
+		nnDotVP = max(0.0, dot(tnorm, normalize(-vec3(lightSource.position)))); //need backlight to increase horizon
+		
+		diff += lightSource.diffuse * unshadowed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * invNumLights ); //modif /float(NUM_LIGHTS)
+		//diff += lightSource.diffuse * unshadowed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
+
+#ifdef TERRAIN_WITH_WATER
+		//Specular reflection
+		vec3 L = normalize(lightSource.position.xyz - eyepos); 
+		vec3 E = normalize(-eyepos);
+		vec3 R = normalize(-reflect(L,tnorm)); 
+		//water only for specular
+	    if (vertexColor.b > 0.05 && vertexColor.r < 0.05) {
+			specularReflection += pow(max(dot(R,E),0.0),16.0)*0.4 * invNumLights; //modif
+		}
+#endif
+}
+//	}
+
 void main(void)
 {
 	vec3 eyepos = varyingEyepos;
@@ -72,20 +114,38 @@ void main(void)
 	vec4 diff = vec4(0.0);
 	float nDotVP=0.0;
 	float nnDotVP=0.0;
-#ifdef TERRAIN_WITH_WATER
+//#ifdef TERRAIN_WITH_WATER
 	float specularReflection=0.0;
-#endif
+//#endif
 
 #if (NUM_LIGHTS > 0)
 	vec3 v = (eyepos - geosphereCenter)/geosphereScaledRadius;
 	float lenInvSq = 1.0/(dot(v,v));
-//&&for (int i=0; i<NUM_LIGHTS; ++i) {
-	if (NUM_LIGHTS > 0) {
-		vec3 lightDir = normalize(vec3(gl_LightSource[0].position));
+	//float invNumLights = INV_NUM_LIGHTS;
+	
+	if (NUM_LIGHTS >= 0)
+	{
+		calcLight(0, gl_LightSource[0], v, nDotVP, nnDotVP, tnorm, diff, eyepos, specularReflection, INV_NUM_LIGHTS);
+	}
+	if (NUM_LIGHTS >= 1)
+	{
+		calcLight(1, gl_LightSource[1], v, nDotVP, nnDotVP, tnorm, diff, eyepos, specularReflection, INV_NUM_LIGHTS);
+	}
+	if (NUM_LIGHTS >= 2)
+	{
+		calcLight(2, gl_LightSource[2], v, nDotVP, nnDotVP, tnorm, diff, eyepos, specularReflection, INV_NUM_LIGHTS);
+	}
+	if (NUM_LIGHTS >= 3)
+	{
+		calcLight(3, gl_LightSource[3], v, nDotVP, nnDotVP, tnorm, diff, eyepos, specularReflection, INV_NUM_LIGHTS);
+	}
+	
+/*	for (int i=0; i<NUM_LIGHTS; ++i) {
+		vec3 lightDir = normalize(vec3(gl_LightSource[i].position));
 		float unshadowed = 1.0;
 #ifdef ECLIPSE
 		for (int j=0; j<shadows; j++) {
-			if (0 != occultedLight[j])
+			if (i != occultedLight[j])
 				continue;
 				
 			vec3 centre = vec3( shadowCentreX[j], shadowCentreY[j], shadowCentreZ[j] );
@@ -100,13 +160,13 @@ void main(void)
 		}
 #endif // ECLIPSE
 		unshadowed = clamp(unshadowed, 0.0, 1.0);
-		nDotVP  = max(0.0, dot(tnorm, normalize(vec3(gl_LightSource[0].position))));
-		nnDotVP = max(0.0, dot(tnorm, normalize(-vec3(gl_LightSource[0].position)))); //need backlight to increase horizon
-		diff += gl_LightSource[0].diffuse * unshadowed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
+		nDotVP  = max(0.0, dot(tnorm, normalize(vec3(gl_LightSource[i].position))));
+		nnDotVP = max(0.0, dot(tnorm, normalize(-vec3(gl_LightSource[i].position)))); //need backlight to increase horizon
+		diff += gl_LightSource[i].diffuse * unshadowed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
 
 #ifdef TERRAIN_WITH_WATER
 		//Specular reflection
-		vec3 L = normalize(gl_LightSource[0].position.xyz - eyepos); 
+		vec3 L = normalize(gl_LightSource[i].position.xyz - eyepos); 
 		vec3 E = normalize(-eyepos);
 		vec3 R = normalize(-reflect(L,tnorm)); 
 		//water only for specular
@@ -115,41 +175,7 @@ void main(void)
 		}
 #endif
 	}
-	if (NUM_LIGHTS > 0) {
-		vec3 lightDir = normalize(vec3(gl_LightSource[1].position));
-		float unshadowed = 1.0;
-		for (int j=0; j<shadows; j++) {
-			if (1 != occultedLight[j])
-				continue;
-				
-			vec3 centre = vec3( shadowCentreX[j], shadowCentreY[j], shadowCentreZ[j] );
-			
-			// Apply eclipse:
-			vec3 projectedPoint = v - dot(lightDir,v)*lightDir;
-			// By our assumptions, the proportion of light blocked at this point by
-			// this sphere is the proportion of the disc of radius lrad around
-			// projectedPoint covered by the disc of radius srad around shadowCentre.
-			float dist = length(projectedPoint - centre);
-			unshadowed *= 1.0 - discCovered(dist/lrad[j], sdivlrad[j]);
-		}
-		unshadowed = clamp(unshadowed, 0.0, 1.0);
-		nDotVP  = max(0.0, dot(tnorm, normalize(vec3(gl_LightSource[1].position))));
-		nnDotVP = max(0.0, dot(tnorm, normalize(-vec3(gl_LightSource[1].position)))); //need backlight to increase horizon
-		diff += gl_LightSource[1].diffuse * unshadowed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
-
-#ifdef TERRAIN_WITH_WATER
-		//Specular reflection
-		vec3 L = normalize(gl_LightSource[1].position.xyz - eyepos); 
-		vec3 E = normalize(-eyepos);
-		vec3 R = normalize(-reflect(L,tnorm)); 
-		//water only for specular
-	    if (vertexColor.b > 0.05 && vertexColor.r < 0.05) {
-			specularReflection += pow(max(dot(R,E),0.0),16.0)*0.4 * INV_NUM_LIGHTS;
-		}
-#endif
-	}
-//&&}
-
+*/
 #ifdef ATMOSPHERE
 	// when does the eye ray intersect atmosphere
 	float atmosStart = findSphereEyeRayEntryDistance(geosphereCenter, eyepos, geosphereScaledRadius * geosphereAtmosTopRad);

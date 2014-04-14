@@ -14,9 +14,7 @@ uniform float geosphereAtmosInvScaleHeight;
 #ifdef ECLIPSE
 uniform int shadows;
 uniform ivec3 occultedLight;
-uniform vec3 shadowCentreX;
-uniform vec3 shadowCentreY;
-uniform vec3 shadowCentreZ;
+uniform mat3 shadowCentre; //modif qui corrige la disparition de l'eclipse.
 uniform vec3 srad;
 uniform vec3 lrad;
 uniform vec3 sdivlrad;
@@ -53,6 +51,73 @@ float shadowInt(const in float t1, const in float t2, const in float dsq, const 
 	return m*(t2-t1) - (t2*s2 - t1*s1 + dsq*( log(max(0.000001, s2+t2)) - log(max(0.000001, s1+t1)))) * 0.5;
 }
 
+//for (int i=0; i<NUM_LIGHTS; ++i) {
+void calcLight(const in int i, const in gl_LightSourceParameters lightSource, inout vec4 atmosDiffuse, inout float specularHighlight, const in vec3 surfaceNorm, const in vec3 a, const in vec3 b)
+{
+	vec3 lightDir = normalize(vec3(lightSource.position));
+
+	float uneclipsed = 1.0;
+#ifdef ECLIPSE
+	for (int j=0; j<shadows; j++) {
+		if (i == occultedLight[j]) //modif qui corrige la disparition de l'eclipse.
+		{
+
+		// Eclipse handling:
+		// Calculate proportion of the in-atmosphere eyeline which is shadowed,
+		// weighting according to completeness of the shadow (penumbra vs umbra).
+		// This ignores variation in atmosphere density, and ignores outscatter along
+		// the eyeline, so is not very accurate. But it gives decent results.
+
+		vec3 centre;
+		if (j==0) centre = shadowCentre[0];
+		if (j==1) centre = shadowCentre[1];
+		if (j==2) centre = shadowCentre[2];
+
+		vec3 ap = a - dot(a,lightDir)*lightDir - centre;
+		vec3 bp = b - dot(b,lightDir)*lightDir - centre;
+
+		vec3 dirp = normalize(bp-ap);
+		float ad = dot(ap,dirp);
+		float bd = dot(bp,dirp);
+		vec3 p = ap - dot(ap,dirp)*dirp;
+		float perpsq = dot(p,p);
+
+		// we now want to calculate the proportion of shadow on the horizontal line
+		// segment from ad to bd, shifted vertically from centre by \sqrt(perpsq). For
+		// the partially occluded segments, to have an analytic solution to the integral
+		// we estimate the light intensity to drop off linearly with radius between
+		// maximal occlusion and none.
+
+		float minr = srad[j]-lrad[j];
+		float maxr = srad[j]+lrad[j];
+		float maxd = sqrt( max(0.0, maxr*maxr - perpsq) );
+		float mind = sqrt( max(0.0, minr*minr - perpsq) );
+
+		float shadow = ( shadowInt(clamp(ad, -maxd, -mind), clamp(bd, -maxd, -mind), perpsq, maxr)
+			+ shadowInt(clamp(ad, mind, maxd), clamp(bd, mind, maxd), perpsq, maxr) )
+			/ (maxr-minr) + (clamp(bd, -mind, mind) - clamp(ad, -mind, mind));
+
+		float maxOcclusion = min(1.0, (sdivlrad[j])*(sdivlrad[j]));
+
+		uneclipsed -= maxOcclusion * shadow / (bd-ad);
+		}
+	}
+#endif // ECLIPSE
+	uneclipsed = clamp(uneclipsed, 0.0, 1.0);
+
+	float nDotVP =  max(0.0, dot(surfaceNorm, lightDir));
+	float nnDotVP = max(0.0, dot(surfaceNorm, -lightDir));  //need backlight to increase horizon
+	atmosDiffuse +=  lightSource.diffuse * uneclipsed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
+
+	//Calculate Specular Highlight
+	vec3 L = normalize(lightSource.position.xyz - varyingEyepos.xyz); 
+	vec3 E = normalize(-varyingEyepos.xyz);
+	vec3 R = normalize(-reflect(L,vec3(0.0))); 
+	specularHighlight += pow(max(dot(R,E),0.0),64.0) * uneclipsed * INV_NUM_LIGHTS;
+
+}
+//}
+
 void main(void)
 {
 	float skyNear, skyFar;
@@ -73,14 +138,32 @@ void main(void)
 
 #if (NUM_LIGHTS > 0)	
 	vec3 surfaceNorm = normalize(skyNear * eyenorm - geosphereCenter);
-//&&for (int i=0; i<NUM_LIGHTS; ++i) {
-	if (NUM_LIGHTS > 0) {
-		vec3 lightDir = normalize(vec3(gl_LightSource[0].position));
+	
+	if (NUM_LIGHTS >= 0)
+	{
+		calcLight(0, gl_LightSource[0], atmosDiffuse, specularHighlight, surfaceNorm, a, b );
+	}
+	if (NUM_LIGHTS >= 1)
+	{
+		calcLight(1, gl_LightSource[1], atmosDiffuse, specularHighlight, surfaceNorm, a, b );
+	}
+	if (NUM_LIGHTS >= 2)
+	{
+		calcLight(2, gl_LightSource[2], atmosDiffuse, specularHighlight, surfaceNorm, a, b );
+	}
+	if (NUM_LIGHTS >= 3)
+	{
+		calcLight(3, gl_LightSource[3], atmosDiffuse, specularHighlight, surfaceNorm, a, b );
+	}
+	
+/*	for (int i=0; i<NUM_LIGHTS; ++i) {
+
+		vec3 lightDir = normalize(vec3(gl_LightSource[i].position));
 
 		float uneclipsed = 1.0;
 #ifdef ECLIPSE
 		for (int j=0; j<shadows; j++) {
-			if (0 != occultedLight[j])
+			if (i != occultedLight[j])
 				continue;
 
 			// Eclipse handling:
@@ -124,71 +207,16 @@ void main(void)
 
 		float nDotVP =  max(0.0, dot(surfaceNorm, lightDir));
 		float nnDotVP = max(0.0, dot(surfaceNorm, -lightDir));  //need backlight to increase horizon
-		atmosDiffuse +=  gl_LightSource[0].diffuse * uneclipsed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
+		atmosDiffuse +=  gl_LightSource[i].diffuse * uneclipsed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
 
 		//Calculate Specular Highlight
-		vec3 L = normalize(gl_LightSource[0].position.xyz - varyingEyepos.xyz); 
+		vec3 L = normalize(gl_LightSource[i].position.xyz - varyingEyepos.xyz); 
 		vec3 E = normalize(-varyingEyepos.xyz);
 		vec3 R = normalize(-reflect(L,vec3(0.0))); 
 		specularHighlight += pow(max(dot(R,E),0.0),64.0) * uneclipsed * INV_NUM_LIGHTS;
+
 	}
-	if (NUM_LIGHTS > 1) {
-		vec3 lightDir = normalize(vec3(gl_LightSource[1].position));
-
-		float uneclipsed = 1.0;
-		for (int j=0; j<shadows; j++) {
-			if (1 != occultedLight[j])
-				continue;
-
-			// Eclipse handling:
-			// Calculate proportion of the in-atmosphere eyeline which is shadowed,
-			// weighting according to completeness of the shadow (penumbra vs umbra).
-			// This ignores variation in atmosphere density, and ignores outscatter along
-			// the eyeline, so is not very accurate. But it gives decent results.
-
-			vec3 centre = vec3( shadowCentreX[j], shadowCentreY[j], shadowCentreZ[j] );
-
-			vec3 ap = a - dot(a,lightDir)*lightDir - centre;
-			vec3 bp = b - dot(b,lightDir)*lightDir - centre;
-
-			vec3 dirp = normalize(bp-ap);
-			float ad = dot(ap,dirp);
-			float bd = dot(bp,dirp);
-			vec3 p = ap - dot(ap,dirp)*dirp;
-			float perpsq = dot(p,p);
-
-			// we now want to calculate the proportion of shadow on the horizontal line
-			// segment from ad to bd, shifted vertically from centre by \sqrt(perpsq). For
-			// the partially occluded segments, to have an analytic solution to the integral
-			// we estimate the light intensity to drop off linearly with radius between
-			// maximal occlusion and none.
-
-			float minr = srad[j]-lrad[j];
-			float maxr = srad[j]+lrad[j];
-			float maxd = sqrt( max(0.0, maxr*maxr - perpsq) );
-			float mind = sqrt( max(0.0, minr*minr - perpsq) );
-
-			float shadow = ( shadowInt(clamp(ad, -maxd, -mind), clamp(bd, -maxd, -mind), perpsq, maxr)
-				+ shadowInt(clamp(ad, mind, maxd), clamp(bd, mind, maxd), perpsq, maxr) )
-				/ (maxr-minr) + (clamp(bd, -mind, mind) - clamp(ad, -mind, mind));
-
-			float maxOcclusion = min(1.0, (sdivlrad[j])*(sdivlrad[j]));
-
-			uneclipsed -= maxOcclusion * shadow / (bd-ad);
-		}
-		uneclipsed = clamp(uneclipsed, 0.0, 1.0);
-
-		float nDotVP =  max(0.0, dot(surfaceNorm, lightDir));
-		float nnDotVP = max(0.0, dot(surfaceNorm, -lightDir));  //need backlight to increase horizon
-		atmosDiffuse +=  gl_LightSource[1].diffuse * uneclipsed * 0.5*(nDotVP+0.5*clamp(1.0-nnDotVP*4.0,0.0,1.0) * INV_NUM_LIGHTS);
-
-		//Calculate Specular Highlight
-		vec3 L = normalize(gl_LightSource[1].position.xyz - varyingEyepos.xyz); 
-		vec3 E = normalize(-varyingEyepos.xyz);
-		vec3 R = normalize(-reflect(L,vec3(0.0))); 
-		specularHighlight += pow(max(dot(R,E),0.0),64.0) * uneclipsed * INV_NUM_LIGHTS;
-	}
-//&&}
+*/
 #endif
 
 	//calculate sunset tone red when passing through more atmosphere, clamp everything.

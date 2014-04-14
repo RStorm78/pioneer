@@ -20,10 +20,10 @@ const vec4 red = vec4(1.0, 0.5, 0.5, 0.5);
 const vec4 blue = vec4(0.5, 0.5, 1.0, 1.0);
 const vec4 hitColour = vec4(1.0, 0.5, 0.5, 1.0);
 
-float calcIntensity(int shieldIndex)
+float calcIntensity(const in vec3 current_position, const in float life)
 {
-	vec3 current_position = hitPos[shieldIndex];
-	float life = radii[shieldIndex];
+	//vec3 current_position = hitPos[shieldIndex];
+	//float life = radii[shieldIndex];
 	float radius = 50.0 * life;
 	vec3 dif = varyingVertex - current_position;
 	
@@ -45,10 +45,48 @@ void main(void)
 	fresnel += 0.05 * (1.0 - fresnel);
 	
 	float sumIntensity = 0.0;
-	for ( int hit=0; hit<numHits; hit++ )
+/*	for ( int hit=0; hit<numHits; hit++ )
 	{
 		sumIntensity += calcIntensity(hit);
 	}
+*/
+	
+	if (numHits >= 0) 
+	{
+		vec3 current_position = hitPos[0];
+		float life = radii[0];
+		sumIntensity += calcIntensity(hitPos[0], radii[0]);
+	}
+	if (numHits >= 1) 
+	{
+		vec3 current_position = hitPos[1];
+		float life = radii[1];
+		sumIntensity += calcIntensity(hitPos[1], radii[1]);
+	}
+	if (numHits >= 2) 
+	{
+		vec3 current_position = hitPos[2];
+		float life = radii[2];
+		sumIntensity += calcIntensity(hitPos[2], radii[2]);
+	}
+	if (numHits >= 3) 
+	{
+		vec3 current_position = hitPos[3];
+		float life = radii[3];
+		sumIntensity += calcIntensity(hitPos[3], radii[3]);
+	}
+	if (numHits >= 4) 
+	{
+		vec3 current_position = hitPos[4];
+		float life = radii[4];
+		sumIntensity += calcIntensity(hitPos[4], radii[4]);
+	}
+	
+	/*if (numHits > 0) sumIntensity += calcIntensity1();
+	if (numHits > 1) sumIntensity += calcIntensity2();
+	if (numHits > 2) sumIntensity += calcIntensity3();
+	if (numHits > 3) sumIntensity += calcIntensity4();
+	*/
 	float clampedInt = clamp(sumIntensity, 0.0, 1.0);
 	
 	// combine a base colour with the (clamped) fresnel value and fade it out according to the cooldown period.

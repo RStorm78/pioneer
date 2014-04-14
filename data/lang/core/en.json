@@ -15,6 +15,10 @@
       "description" : "Alt key on keyboard",
       "message" : "Alt"
    },
+   "ALT_IN_ALL" : {
+		"description" : "",
+	    "message" : "Alt: %altitude (%vspeed)"
+	},
    "ALT_IN_KM" : {
       "description" : "",
       "message" : "Alt: %altitude{f.0}km (%vspeed{f.1}km/s)"
@@ -22,7 +26,7 @@
    "ALT_IN_METRES" : {
       "description" : "",
       "message" : "Alt: %altitude{f.0}m (%vspeed{f.1}m/s)"
-   },
+   },	
    "AND_HIGHLY_COMPLEX_ECOSYSTEM" : {
       "description" : "",
       "message" : "\" and a highly complex ecosystem.\""
@@ -1439,6 +1443,10 @@
       "description" : "",
       "message" : "Set low thrust power level to %power%%"
    },
+   "SET_SPEED_ALL" : {
+		"description" : "",
+	    "message" : "Set speed: %speed"
+	},
    "SET_SPEED_KM_S" : {
       "description" : "",
       "message" : "Set speed: %speed{f.2} km/s"
@@ -1446,7 +1454,11 @@
    "SET_SPEED_M_S" : {
       "description" : "",
       "message" : "Set speed: %speed{f.0} m/s"
-   },
+   },	
+   "ALL_RELATIVE_TO" : {
+    "description" : "",
+      "message" : "%speed rel-to %frame"
+	},
    "SHIELD_ENERGY_BOOSTER" : {
       "description" : "",
       "message" : "Shield Energy Booster"
