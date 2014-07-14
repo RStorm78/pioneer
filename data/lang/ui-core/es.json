@@ -47,6 +47,10 @@
       "description" : "",
       "message" : "Tablón de anuncios"
    },
+   "BUY" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "+"
+   },
    "BUY_SHIP" : {
       "description" : "",
       "message" : "Comprar Nave"
@@ -154,6 +158,10 @@
    "CONSTABLE" : {
       "description" : "",
       "message" : "Guardia"
+   },
+   "CONTINUE_GAME" : {
+      "description" : "",
+      "message" : "Continuar juego"
    },
    "CONTROLS" : {
       "description" : "",
@@ -429,7 +437,7 @@
    },
    "IM_TIRED_OF_WORKING_FOR_NOTHING_DONT_YOU_KNOW_WHAT_A_CONTRACT_IS" : {
       "description" : "",
-      "message" : "Estoy harto de trabajar por nada. Conoce la palabra contrato?"
+      "message" : "Estoy harto de trabajar por nada. ¿Conoce la palabra contrato?"
    },
    "INACTIVE" : {
       "description" : "",
@@ -478,6 +486,18 @@
    "LANGUAGE_RESTART_GAME_TO_APPLY" : {
       "description" : "",
       "message" : "Idioma (reiniciar para aplicar)"
+   },
+   "LAUNCH_PERMISSION_DENIED_BUSY" : {
+      "description" : "",
+      "message" : "Permiso para despegar denegado: Bahía de atraque ocupada."
+   },
+   "LAUNCH_PERMISSION_DENIED_CREW" : {
+      "description" : "",
+      "message" : "Permiso para despegar denegado: no dispone de suficiente tripulación."
+   },
+   "LAUNCH_PERMISSION_DENIED_FINED" : {
+      "description" : "",
+      "message" : "Permiso para despegar denegado: tiene multas pendientes."
    },
    "LEGAL_STATUS" : {
       "description" : "",
@@ -603,6 +623,10 @@
       "description" : "",
       "message" : "Tripulación mínima"
    },
+   "MISSILE_MOUNTS" : {
+      "description" : "",
+      "message" : "Montaje de misiles"
+   },
    "MISSIONS" : {
       "description" : "",
       "message" : "Misiones"
@@ -655,6 +679,10 @@
       "description" : "",
       "message" : "Próximo pago"
    },
+   "NO" : {
+      "description" : "Negative answer to a question",
+      "message" : "No"
+   },
    "NOBODY" : {
       "description" : "For player reputation",
       "message" : "Nadie"
@@ -670,6 +698,10 @@
    "NOT_ENOUGH_ALLOY_TO_ATTEMPT_A_REPAIR" : {
       "description" : "",
       "message" : "No hay suficiente {alloy} para la reparación"
+   },
+   "NOT_SUPPORTED_ON_THIS_SHIP" : {
+      "description" : "",
+      "message" : "No se admite {equipment} en este modelo de nave."
    },
    "NO_MISSIONS" : {
       "description" : "",
@@ -775,10 +807,6 @@
       "description" : "",
       "message" : "Calificación"
    },
-   "QUICKLOAD" : {
-      "description" : "",
-      "message" : "Carga rápida"
-   },
    "QUIT" : {
       "description" : "",
       "message" : "Salir"
@@ -799,6 +827,10 @@
       "description" : "",
       "message" : "Repostar"
    },
+   "REFUEL_FULL" : {
+      "description" : "",
+      "message" : "Llenar el tanque"
+   },
    "RELIABLE" : {
       "description" : "For player reputation",
       "message" : "Seguro"
@@ -814,6 +846,10 @@
    "REQUEST_LAUNCH" : {
       "description" : "",
       "message" : "Solicitar permiso para despegar"
+   },
+   "RETURN_TO_GAME" : {
+      "description" : "",
+      "message" : "Regresar al juego"
    },
    "RETURN_TO_MENU" : {
       "description" : "",
@@ -851,6 +887,10 @@
       "description" : "",
       "message" : "Selecciona juego salvado..."
    },
+   "SELL" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "-"
+   },
    "SENSORS" : {
       "description" : "",
       "message" : "Sensores:"
@@ -866,6 +906,10 @@
    "SHIP_IS_ALREADY_FULLY_REPAIRED" : {
       "description" : "",
       "message" : "La nave se encuentra en perfectas condiciones."
+   },
+   "SHIP_IS_FULLY_EQUIPPED" : {
+      "description" : "",
+      "message" : "Su nave está totalmente equipada."
    },
    "SHIP_IS_FULLY_LADEN" : {
       "description" : "",
@@ -922,6 +966,10 @@
    "TOGGLE_MALE_FEMALE" : {
       "description" : "",
       "message" : "Hombre/Mujer"
+   },
+   "TOO_SMALL_FOR_CURRENT_CREW" : {
+      "description" : "",
+      "message" : "La nave es demasiado pequeña para la tripulación actal."
    },
    "TOTAL" : {
       "description" : "",
@@ -999,9 +1047,13 @@
       "description" : "",
       "message" : "Por ahora está limpio."
    },
+   "YES" : {
+      "description" : "Positive answer to a question",
+      "message" : "Si"
+   },
    "YOURE_GOING_TO_REGRET_SACKING_ME" : {
       "description" : "",
-      "message" : "Va a lamentar haberme explotado!"
+      "message" : "¡Va a lamentar haberme explotado!"
    },
    "YOUR_HULL_IS_AT_X_INTEGRITY" : {
       "description" : "",

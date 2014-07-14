@@ -47,6 +47,10 @@
       "description" : "",
       "message" : "İlan tahtası"
    },
+   "BUY" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "Buy"
+   },
    "BUY_SHIP" : {
       "description" : "",
       "message" : "Gemi Al"
@@ -154,6 +158,10 @@
    "CONSTABLE" : {
       "description" : "",
       "message" : "Güvenlik amiri"
+   },
+   "CONTINUE_GAME" : {
+      "description" : "",
+      "message" : "Oyuna devam et"
    },
    "CONTROLS" : {
       "description" : "",
@@ -479,6 +487,18 @@
       "description" : "",
       "message" : "Dil (uygulamak için yeniden başlatın)"
    },
+   "LAUNCH_PERMISSION_DENIED_BUSY" : {
+      "description" : "",
+      "message" : "Kalkış izni reddedildi: sabitlenme bölmesi meşgul."
+   },
+   "LAUNCH_PERMISSION_DENIED_CREW" : {
+      "description" : "",
+      "message" : "Denize iniş izni reddedildi: bu gemiyi idare edecek yeterli ekip sayısına sahip değil."
+   },
+   "LAUNCH_PERMISSION_DENIED_FINED" : {
+      "description" : "",
+      "message" : "Denize iniş izni reddedildi: borcunuz var."
+   },
    "LEGAL_STATUS" : {
       "description" : "",
       "message" : "Yasal durum"
@@ -603,6 +623,10 @@
       "description" : "",
       "message" : "En az mürettebat"
    },
+   "MISSILE_MOUNTS" : {
+      "description" : "",
+      "message" : "Füze tepeleri"
+   },
    "MISSIONS" : {
       "description" : "",
       "message" : "Görevler"
@@ -655,6 +679,10 @@
       "description" : "",
       "message" : "Sonraki ödeme"
    },
+   "NO" : {
+      "description" : "Negative answer to a question",
+      "message" : "Hayır"
+   },
    "NOBODY" : {
       "description" : "For player reputation",
       "message" : "Hiç kimse"
@@ -670,6 +698,10 @@
    "NOT_ENOUGH_ALLOY_TO_ATTEMPT_A_REPAIR" : {
       "description" : "",
       "message" : "Tamir denemesi için yeterince {alloy} yok"
+   },
+   "NOT_SUPPORTED_ON_THIS_SHIP" : {
+      "description" : "",
+      "message" : "{ekipman}, bu gemi modelini desteklenmiyor"
    },
    "NO_MISSIONS" : {
       "description" : "",
@@ -775,10 +807,6 @@
       "description" : "",
       "message" : "Test sonuçları"
    },
-   "QUICKLOAD" : {
-      "description" : "",
-      "message" : "Hızlı yükleme"
-   },
    "QUIT" : {
       "description" : "",
       "message" : "Çıkış"
@@ -799,6 +827,10 @@
       "description" : "",
       "message" : "Yakıt al"
    },
+   "REFUEL_FULL" : {
+      "description" : "",
+      "message" : "Yakıt dolumu dolu"
+   },
    "RELIABLE" : {
       "description" : "For player reputation",
       "message" : "Güvenilir"
@@ -814,6 +846,10 @@
    "REQUEST_LAUNCH" : {
       "description" : "",
       "message" : "Kalkış Talep Et"
+   },
+   "RETURN_TO_GAME" : {
+      "description" : "",
+      "message" : "Oyuna dön"
    },
    "RETURN_TO_MENU" : {
       "description" : "",
@@ -851,6 +887,10 @@
       "description" : "",
       "message" : "Yüklenecek oyunu seçin..."
    },
+   "SELL" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "Sell"
+   },
    "SENSORS" : {
       "description" : "",
       "message" : "Algılayıcılar:"
@@ -866,6 +906,10 @@
    "SHIP_IS_ALREADY_FULLY_REPAIRED" : {
       "description" : "",
       "message" : "Geminiz mükemmel durumda."
+   },
+   "SHIP_IS_FULLY_EQUIPPED" : {
+      "description" : "",
+      "message" : "Geminiz tam donanımlı."
    },
    "SHIP_IS_FULLY_LADEN" : {
       "description" : "",
@@ -922,6 +966,10 @@
    "TOGGLE_MALE_FEMALE" : {
       "description" : "",
       "message" : "Erkek/kadın"
+   },
+   "TOO_SMALL_FOR_CURRENT_CREW" : {
+      "description" : "",
+      "message" : "Gemi mevcut mürettebat için çok küçük."
    },
    "TOTAL" : {
       "description" : "",
@@ -998,6 +1046,10 @@
    "WE_HAVE_NO_BUSINESS_WITH_YOU" : {
       "description" : "",
       "message" : "Şu anda sizinle bir işimiz yok."
+   },
+   "YES" : {
+      "description" : "Positive answer to a question",
+      "message" : "Evet"
    },
    "YOURE_GOING_TO_REGRET_SACKING_ME" : {
       "description" : "",

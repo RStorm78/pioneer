@@ -14,11 +14,11 @@
 #include "Planet.h"
 #include "Player.h"
 #include "Polit.h"
-#include "Polit.h"
 #include "Serializer.h"
 #include "Ship.h"
 #include "Space.h"
 #include "StringF.h"
+#include "ShipCpanel.h"
 #include "galaxy/StarSystem.h"
 #include "graphics/Graphics.h"
 #include "scenegraph/ModelSkin.h"
@@ -206,7 +206,7 @@ int SpaceStation::NumShipsDocked() const
 {
 	Sint32 numShipsDocked = 0;
 	for (Uint32 i=0; i<m_shipDocking.size(); i++) {
-		if (NULL != m_shipDocking[i].ship) 
+		if (NULL != m_shipDocking[i].ship)
 			++numShipsDocked;
 	}
 	return numShipsDocked;
@@ -277,7 +277,7 @@ bool SpaceStation::LaunchShip(Ship *ship, int port)
 	m_doorAnimationStep = 0.3; // open door
 
 	const Aabb& aabb = ship->GetAabb();
-	const matrix3x3d mt = ship->GetOrient();
+	const matrix3x3d& mt = ship->GetOrient();
 	const vector3d up = mt.VectorY().Normalized() * aabb.min.y;
 
 	sd.fromPos = (ship->GetPosition() - GetPosition() + up) * GetOrient();	// station space
@@ -407,7 +407,8 @@ void SpaceStation::DockingUpdate(const double timeStep)
 			m_doorAnimationStep = 0.3; // open door
 
 			if (dt.stagePos >= 1.0) {
-				if (dt.ship == static_cast<Ship*>(Pi::player)) Pi::onDockingClearanceExpired.emit(this);
+				if (dt.ship == Pi::player)
+					Pi::cpan->MsgLog()->ImportantMessage(GetLabel(), Lang::DOCKING_CLEARANCE_EXPIRED);
 				dt.ship = 0;
 				dt.stage = 0;
 				m_doorAnimationStep = -0.3; // close door
@@ -646,9 +647,16 @@ void SpaceStation::DoLawAndOrder(const double timeStep)
 			ship->SetDockedWith(this, port);
 			Pi::game->GetSpace()->AddBody(ship);
 			ship->SetLabel(Lang::POLICE_SHIP_REGISTRATION);
-			ship->m_equipment.Set(Equip::SLOT_LASER, 0, Equip::PULSECANNON_DUAL_1MW);
-			ship->m_equipment.Add(Equip::LASER_COOLING_BOOSTER);
-			ship->m_equipment.Add(Equip::ATMOSPHERIC_SHIELDING);
+			lua_State *l = Lua::manager->GetLuaState();
+			LUA_DEBUG_START(l);
+			pi_lua_import(l, "Equipment");
+			LuaTable equip(l, -1);
+			LuaTable misc = equip.Sub("misc");
+			LuaObject<Ship>::CallMethod(ship, "AddEquip", equip.Sub("laser").Sub("pulsecannon_dual_1mw"));
+			LuaObject<Ship>::CallMethod(ship, "AddEquip", misc.Sub("laser_cooling_booster"));
+			LuaObject<Ship>::CallMethod(ship, "AddEquip", misc.Sub("atmospheric_shielding"));
+			lua_pop(l, 6);
+			LUA_DEBUG_END(l, 0);
 			ship->UpdateStats();
 		} else {
 			delete ship;

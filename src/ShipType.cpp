@@ -111,6 +111,12 @@ int _define_ship(lua_State *L, ShipType::Tag tag, std::vector<ShipType::Id> *lis
 	s.hullMass = t.Get("hull_mass", 100);
 	s.fuelTankMass = t.Get("fuel_tank_mass", 5);
 
+	LuaTable slot_table = t.Sub("slots");
+	if (slot_table.GetLua()) {
+		s.slots = slot_table.GetMap<std::string, int>();
+	}
+	lua_pop(L, 1);
+
 	// fuel_use_rate can be given in two ways
 	float thruster_fuel_use = 0;
 	s.effectiveExhaustVelocity = t.Get("effective_exhaust_velocity", -1.0f);
@@ -134,15 +140,7 @@ int _define_ship(lua_State *L, ShipType::Tag tag, std::vector<ShipType::Id> *lis
 
 	s.equipSlotCapacity[Equip::SLOT_ENGINE] = Clamp(s.equipSlotCapacity[Equip::SLOT_ENGINE], 0, 1);
 
-	{
-		int hyperclass;
-		hyperclass = t.Get("hyperdrive_class", 1);
-		if (!hyperclass) {
-			s.hyperdrive = Equip::NONE;
-		} else {
-			s.hyperdrive = Equip::Type(Equip::DRIVE_CLASS1+hyperclass-1);
-		}
-	}
+	s.hyperdriveClass = t.Get("hyperdrive_class", 1);
 
 	for (int i = 0; i < ShipType::GUNMOUNT_MAX; i++) {
 		s.gunMount[i].pos = vector3f(0,0,0);

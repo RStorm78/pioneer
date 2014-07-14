@@ -9,6 +9,7 @@
 #include "EquipType.h"
 #include <vector>
 #include <map>
+#include <string>
 
 struct ShipType {
 	enum Thruster { // <enum scope='ShipType' name=ShipTypeThruster prefix=THRUSTER_ public>
@@ -55,12 +56,13 @@ struct ShipType {
 		DualLaserOrientation orient;
 	} gunMount[GUNMOUNT_MAX];
 	int equipSlotCapacity[Equip::SLOT_MAX];
+	std::map<std::string, int> slots;
 	int capacity; // tonnes
 	int hullMass;
 	float effectiveExhaustVelocity; // velocity at which the propellant escapes the engines
 	int fuelTankMass; //full fuel tank mass, on top of hullMass
 	int baseprice;
-	Equip::Type hyperdrive;
+	int hyperdriveClass;
 	vector3d cameraOffset;
 	int minCrew, maxCrew; // XXX really only for Lua, but needs to be declared in the ship def
 	///////

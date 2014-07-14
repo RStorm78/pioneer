@@ -47,6 +47,10 @@
       "description" : "",
       "message" : "Bòrd-brath"
    },
+   "BUY" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "Ceannaich"
+   },
    "BUY_SHIP" : {
       "description" : "",
       "message" : "Ceannaich soitheach"
@@ -154,6 +158,10 @@
    "CONSTABLE" : {
       "description" : "",
       "message" : "Constabal"
+   },
+   "CONTINUE_GAME" : {
+      "description" : "",
+      "message" : "Lean air a' gheama"
    },
    "CONTROLS" : {
       "description" : "",
@@ -341,7 +349,7 @@
    },
    "FUEL_TANK_FULL" : {
       "description" : "",
-      "message" : "Tha an taca-connaidh làn."
+      "message" : "Tha an tanca-connaidh làn."
    },
    "FUEL_WEIGHT" : {
       "description" : "",
@@ -365,7 +373,7 @@
    },
    "HANG_UP" : {
       "description" : "",
-      "message" : "Hang up."
+      "message" : "Cuir crìoch air a' ghairm."
    },
    "HARMLESS" : {
       "description" : "",
@@ -478,6 +486,18 @@
    "LANGUAGE_RESTART_GAME_TO_APPLY" : {
       "description" : "",
       "message" : "Cànan (ath-thòisich an geama gus seo a chur an sàs)"
+   },
+   "LAUNCH_PERMISSION_DENIED_BUSY" : {
+      "description" : "",
+      "message" : "Chaidh an t-iarrtas losgaidh a dhiùltadh: tha an t-ionad docaidh trang."
+   },
+   "LAUNCH_PERMISSION_DENIED_CREW" : {
+      "description" : "",
+      "message" : "Chaidh cead losgaidh a dhiùltadh: chan eil an sgioba agad mòr gu leòr gus an soitheach seo a làimhseachadh."
+   },
+   "LAUNCH_PERMISSION_DENIED_FINED" : {
+      "description" : "",
+      "message" : "Chaidh cead losgaidh a dhiùltadh: tha cìsean againn ort."
    },
    "LEGAL_STATUS" : {
       "description" : "",
@@ -603,6 +623,10 @@
       "description" : "",
       "message" : "An criutha as lugha"
    },
+   "MISSILE_MOUNTS" : {
+      "description" : "",
+      "message" : "Ionadan astais"
+   },
    "MISSIONS" : {
       "description" : "",
       "message" : "Miseanan"
@@ -655,6 +679,10 @@
       "description" : "",
       "message" : "An t-ath phàigheadh"
    },
+   "NO" : {
+      "description" : "Negative answer to a question",
+      "message" : "Chan eil"
+   },
    "NOBODY" : {
       "description" : "For player reputation",
       "message" : "Gun urram"
@@ -670,6 +698,10 @@
    "NOT_ENOUGH_ALLOY_TO_ATTEMPT_A_REPAIR" : {
       "description" : "",
       "message" : "Chan eil {alloy} gu leòr agad gus feuchainn ris a chàradh"
+   },
+   "NOT_SUPPORTED_ON_THIS_SHIP" : {
+      "description" : "",
+      "message" : "Cha chuir am modal soithich seo taic ri {equipment}"
    },
    "NO_MISSIONS" : {
       "description" : "",
@@ -775,10 +807,6 @@
       "description" : "",
       "message" : "Sgòran teisteanais"
    },
-   "QUICKLOAD" : {
-      "description" : "",
-      "message" : "Grad-luchdadh"
-   },
    "QUIT" : {
       "description" : "",
       "message" : "Fàg an-seo"
@@ -799,6 +827,10 @@
       "description" : "",
       "message" : "Tog connadh"
    },
+   "REFUEL_FULL" : {
+      "description" : "",
+      "message" : "Lìon an connadh"
+   },
    "RELIABLE" : {
       "description" : "For player reputation",
       "message" : "Earbsach"
@@ -814,6 +846,10 @@
    "REQUEST_LAUNCH" : {
       "description" : "",
       "message" : "Iarr cead losgaidh"
+   },
+   "RETURN_TO_GAME" : {
+      "description" : "",
+      "message" : "Till dhan gheama"
    },
    "RETURN_TO_MENU" : {
       "description" : "",
@@ -851,6 +887,10 @@
       "description" : "",
       "message" : "Tagh geama gus a luchdadh..."
    },
+   "SELL" : {
+      "description" : "Commodities and equipment prices",
+      "message" : "Reic"
+   },
    "SENSORS" : {
       "description" : "",
       "message" : "Mothaichearan:"
@@ -866,6 +906,10 @@
    "SHIP_IS_ALREADY_FULLY_REPAIRED" : {
       "description" : "",
       "message" : "Tha cor do shoitheach foirfe."
+   },
+   "SHIP_IS_FULLY_EQUIPPED" : {
+      "description" : "",
+      "message" : "Tha an soitheach agad uidheamaichte gu slàn."
    },
    "SHIP_IS_FULLY_LADEN" : {
       "description" : "",
@@ -922,6 +966,10 @@
    "TOGGLE_MALE_FEMALE" : {
       "description" : "",
       "message" : "Toglaich fireann/boireann"
+   },
+   "TOO_SMALL_FOR_CURRENT_CREW" : {
+      "description" : "",
+      "message" : "Tha an soitheach ro bheag airson an sgioba agad."
    },
    "TOTAL" : {
       "description" : "",
@@ -998,6 +1046,10 @@
    "WE_HAVE_NO_BUSINESS_WITH_YOU" : {
       "description" : "",
       "message" : "Chan eil gnothach againn ruibh aig an àm seo."
+   },
+   "YES" : {
+      "description" : "Positive answer to a question",
+      "message" : "Tha"
    },
    "YOURE_GOING_TO_REGRET_SACKING_ME" : {
       "description" : "",

@@ -11,6 +11,7 @@
 #include "TextureGL.h"
 #include "VertexArray.h"
 #include "GLDebug.h"
+#include "gl2/GasGiantMaterial.h"
 #include "gl2/GeoSphereMaterial.h"
 #include "gl2/GL2Material.h"
 #include "gl2/GL2RenderState.h"
@@ -148,8 +149,13 @@ bool RendererGL2::SwapBuffers()
 		std::stringstream ss;
 		ss << "OpenGL error(s) during frame:\n";
 		while (err != GL_NO_ERROR) {
-			ss << glerr_to_string(err) << '\n';
+			ss << glerr_to_string(err) << std::endl;
 			err = glGetError();
+			if( err == GL_OUT_OF_MEMORY ) {
+				ss << "Out-of-memory on graphics card." << std::endl
+					<< "Recommend enabling \"Compress Textures\" in game options." << std::endl
+					<< "Also try reducing City and Planet detail settings." << std::endl;
+			}
 		}
 		Error("%s", ss.str().c_str());
 	}
@@ -622,6 +628,9 @@ Material *RendererGL2::CreateMaterial(const MaterialDescriptor &d)
 		break;
 	case EFFECT_SPHEREIMPOSTOR:
 		mat = new GL2::SphereImpostorMaterial();
+		break;
+	case EFFECT_GASSPHERE_TERRAIN:
+		mat = new GL2::GasGiantSurfaceMaterial();
 		break;
 	default:
 		if (desc.lighting)
